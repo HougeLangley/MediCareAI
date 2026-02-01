@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <title>个人中心 - MediCare AI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            border-radius: 16px;
+            padding: 20px 30px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .avatar {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .user-details h1 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .user-details p {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+
+        .nav-links a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: #764ba2;
+        }
+
+        .form-section {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 30px;
+        }
+
+        .form-section h2 {
+            margin-top: 0;
+            margin-bottom: 25px;
+            color: #333;
+            font-size: 22px;
+            font-weight: 600;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .form-group label .required {
+            color: #e74c3c;
+            margin-left: 4px;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="tel"],
+        .form-group input[type="email"],
+        .form-group input[type="date"],
+        .form-group input[type="number"],
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+
+        .form-group input:read-only {
+            background: #f5f5f5;
+            cursor: not-allowed;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-group small {
+            display: block;
+            margin-top: 5px;
+            color: #888;
+            font-size: 12px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .btn-save {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            flex: 1;
+        }
+
+        .btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-cancel {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+            padding: 14px 40px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            flex: 1;
+        }
+
+        .btn-cancel:hover {
+            background: #f0f0f0;
+        }
+
+        .result {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: center;
+            font-weight: 500;
+            display: none;
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        .result.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .info-card {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px 20px;
+            margin-bottom: 25px;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .info-card p {
+            margin: 0;
+            color: #555;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .header {
+                flex-direction: column;
+                text-align: center;
+                gap: 15px;
+            }
+            
+            .btn-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="user-info">
+                <div class="avatar" id="userAvatar">患</div>
+                <div class="user-details">
+                    <h1 id="welcomeTitle">个人中心</h1>
+                    <p id="userEmail">加载中...</p>
+                </div>
+            </div>
+            <div class="nav-links">
+                <a href="index.html">首页</a>
+                <a href="login.html" onclick="logout()">退出登录</a>
+            </div>
+        </div>
+
+        <!-- 账户信息 -->
+        <div class="form-section">
+            <h2>账户信息</h2>
+            
+            <div class="info-card">
+                <p>以下信息用于登录和系统识别，邮箱地址不可修改。</p>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>邮箱地址 <span class="required">*</span></label>
+                    <input type="email" id="email" readonly placeholder="您的邮箱地址">
+                    <small>邮箱地址用于登录，无法修改</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>姓名 <span class="required">*</span></label>
+                    <input type="text" id="fullName" placeholder="请输入您的真实姓名">
+                </div>
+            </div>
+        </div>
+
+        <!-- 基本信息 -->
+        <div class="form-section">
+            <h2>基本信息</h2>
+            
+            <div class="info-card">
+                <p>请填写您的基本个人信息，这将帮助系统更好地为您服务。</p>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>出生日期</label>
+                    <input type="date" id="dateOfBirth" placeholder="选择出生日期">
+                </div>
+                
+                <div class="form-group">
+                    <label>性别</label>
+                    <select id="gender">
+                        <option value="">请选择</option>
+                        <option value="male">男</option>
+                        <option value="female">女</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>手机号码</label>
+                    <input type="tel" id="phone" placeholder="请输入手机号码">
+                </div>
+            </div>
+        </div>
+
+        <!-- 紧急联系人 -->
+        <div class="form-section">
+            <h2>紧急联系人</h2>
+            
+            <div class="info-card">
+                <p>请填写紧急联系人信息，在紧急情况下我们会联系此人。</p>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>紧急联系人姓名</label>
+                    <input type="text" id="emergencyContactName" placeholder="请输入紧急联系人姓名">
+                </div>
+                
+                <div class="form-group">
+                    <label>紧急联系人电话</label>
+                    <input type="tel" id="emergencyContactPhone" placeholder="请输入紧急联系人电话">
+                </div>
+            </div>
+        </div>
+
+        <!-- 备注信息 -->
+        <div class="form-section">
+            <h2>备注信息</h2>
+            
+            <div class="info-card">
+                <p>您可以在这里记录其他需要告知医生的重要信息。</p>
+            </div>
+
+            <div class="form-group">
+                <label>其他备注</label>
+                <textarea id="notes" placeholder="请描述其他需要记录的信息，如过敏史、既往病史、当前用药等"></textarea>
+            </div>
+        </div>
+
+        <!-- 地址信息 -->
+        <div class="form-section">
+            <h2>地址信息</h2>
+
+            <div class="form-group">
+                <label>居住地址</label>
+                <textarea id="address" placeholder="请输入您的详细居住地址"></textarea>
+            </div>
+        </div>
+
+        <!-- 保存按钮 -->
+        <div class="form-section">
+            <div class="result" id="result"></div>
+            
+            <div class="btn-group">
+                <button class="btn-save" onclick="saveUserProfile()">保存所有信息</button>
+                <button class="btn-cancel" onclick="resetForm()">重置表单</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://192.168.50.115:8000';
+
+        // 检查用户登录状态
+        function checkAuth() {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                window.location.href = '/login.html';
+                return;
+            }
+        }
+
+        // 退出登录
+        function logout() {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('user_name');
+            localStorage.removeItem('user_email');
+            localStorage.removeItem('user_id');
+            window.location.href = '/login.html';
+        }
+
+        // 处理 401 错误 - 清除 token 并跳转到登录页
+        function handleUnauthorized() {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('user_name');
+            localStorage.removeItem('user_email');
+            localStorage.removeItem('user_id');
+            window.location.href = '/login.html';
+        }
+
+        // 加载用户信息
+        async function loadUserProfile() {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                handleUnauthorized();
+                return;
+            }
+
+            try {
+                // 加载用户账户信息
+                const userResponse = await fetch(`${API_BASE}/api/v1/auth/me`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (userResponse.status === 401) {
+                    handleUnauthorized();
+                    return;
+                }
+
+                if (userResponse.ok) {
+                    const userData = await userResponse.json();
+                    // 填充用户基本信息
+                    if (userData.email) {
+                        document.getElementById('email').value = userData.email;
+                        document.getElementById('userEmail').textContent = userData.email;
+                    }
+                    if (userData.full_name) {
+                        document.getElementById('fullName').value = userData.full_name;
+                        document.getElementById('welcomeTitle').textContent = userData.full_name + '的个人中心';
+                        localStorage.setItem('user_name', userData.full_name);
+                    }
+                }
+
+                // 加载患者详细信息
+                const patientResponse = await fetch(`${API_BASE}/api/v1/patients/me`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (patientResponse.status === 401) {
+                    handleUnauthorized();
+                    return;
+                }
+
+                if (patientResponse.ok) {
+                    const patientData = await patientResponse.json();
+                    console.log('加载患者数据成功:', patientData);
+                    // 填充患者信息
+                    if (patientData.date_of_birth) document.getElementById('dateOfBirth').value = patientData.date_of_birth;
+                    if (patientData.gender) document.getElementById('gender').value = patientData.gender;
+                    if (patientData.phone) document.getElementById('phone').value = patientData.phone;
+                    
+                    // 解析紧急联系人信息
+                    if (patientData.emergency_contact) {
+                        const parts = patientData.emergency_contact.split(' ');
+                        if (parts.length >= 1) {
+                            document.getElementById('emergencyContactName').value = parts[0];
+                        }
+                        if (parts.length >= 2) {
+                            document.getElementById('emergencyContactPhone').value = parts[1];
+                        }
+                    }
+                    
+                    if (patientData.address) document.getElementById('address').value = patientData.address;
+                    if (patientData.notes) document.getElementById('notes').value = patientData.notes;
+                } else if (patientResponse.status === 404) {
+                    console.log('患者记录不存在（正常，首次访问）');
+                }
+            } catch (error) {
+                console.error('加载用户信息失败:', error);
+                showResult('error', '加载用户信息失败，请刷新页面重试');
+            }
+        }
+
+        // 重置表单
+        function resetForm() {
+            if (confirm('确定要重置所有表单内容吗？未保存的更改将丢失。')) {
+                loadUserProfile();
+                showResult('success', '表单已重置');
+            }
+        }
+
+        // 保存用户信息
+        async function saveUserProfile() {
+            const token = localStorage.getItem('access_token');
+            const resultDiv = document.getElementById('result');
+
+            if (!token) {
+                showResult('error', '请先登录');
+                return;
+            }
+
+            // 获取表单数据
+            const fullName = document.getElementById('fullName').value.trim();
+            
+            if (!fullName) {
+                showResult('error', '姓名不能为空');
+                document.getElementById('fullName').focus();
+                return;
+            }
+
+            // 显示保存状态
+            resultDiv.className = 'result show';
+            resultDiv.innerHTML = '保存中，请稍候...';
+
+            try {
+                // 1. 保存用户基本信息
+                const userResponse = await fetch(`${API_BASE}/api/v1/auth/me`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        full_name: fullName
+                    })
+                });
+
+                if (userResponse.status === 401) {
+                    handleUnauthorized();
+                    return;
+                }
+
+                if (!userResponse.ok) {
+                    const errorData = await userResponse.json();
+                    throw new Error(errorData.detail || '保存用户信息失败');
+                }
+
+                // 2. 保存患者详细信息
+                // 注意：name 从 User 表获取，不在 Patient 表中存储
+                // 组合紧急联系人信息
+                const emergencyContactName = document.getElementById('emergencyContactName').value.trim();
+                const emergencyContactPhone = document.getElementById('emergencyContactPhone').value.trim();
+                let emergencyContact = null;
+                if (emergencyContactName || emergencyContactPhone) {
+                    emergencyContact = `${emergencyContactName} ${emergencyContactPhone}`.trim();
+                }
+                
+                const patientData = {
+                    date_of_birth: document.getElementById('dateOfBirth').value || null,
+                    gender: document.getElementById('gender').value || null,
+                    phone: document.getElementById('phone').value || null,
+                    emergency_contact: emergencyContact,
+                    address: document.getElementById('address').value || null,
+                    notes: document.getElementById('notes').value || null
+                };
+
+                const patientResponse = await fetch(`${API_BASE}/api/v1/patients/me`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(patientData)
+                });
+
+                if (patientResponse.status === 401) {
+                    handleUnauthorized();
+                    return;
+                }
+
+                if (patientResponse.ok || patientResponse.status === 404) {
+                    // 如果患者记录不存在(404)，尝试创建
+                    if (patientResponse.status === 404) {
+                        console.log('患者记录不存在，正在创建新记录...', patientData);
+                        const createResponse = await fetch(`${API_BASE}/api/v1/patients`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(patientData)
+                        });
+                        
+                        if (createResponse.status === 401) {
+                            handleUnauthorized();
+                            return;
+                        }
+                        
+                        if (!createResponse.ok) {
+                            const errorData = await createResponse.json();
+                            console.error('创建患者记录失败:', errorData);
+                            showResult('error', '创建档案失败：' + (errorData.detail || '未知错误'));
+                            return;
+                        } else {
+                            console.log('患者记录创建成功');
+                        }
+                    }
+
+                    // 保存成功
+                    localStorage.setItem('user_name', fullName);
+                    document.getElementById('welcomeTitle').textContent = fullName + '的个人中心';
+                    showResult('success', '个人信息保存成功！2秒后自动返回主页...');
+                    
+                    // 2秒后自动返回主页
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 2000);
+                } else {
+                    const errorData = await patientResponse.json();
+                    console.warn('保存患者信息失败:', errorData);
+                    // 即使患者信息保存失败，用户信息已保存
+                    showResult('success', '基本信息已保存（部分健康信息可能未同步）');
+                }
+            } catch (error) {
+                console.error('保存失败:', error);
+                showResult('error', '保存失败：' + error.message);
+            }
+        }
+
+        // 显示结果
+        function showResult(type, message) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = 'result show ' + type;
+            resultDiv.textContent = message;
+            
+            // 3秒后自动隐藏成功消息
+            if (type === 'success') {
+                setTimeout(() => {
+                    resultDiv.className = 'result';
+                }, 3000);
+            }
+        }
+
+        // 页面加载时检查登录状态并加载用户信息
+        window.addEventListener('load', () => {
+            checkAuth();
+            loadUserProfile();
+        });
+    </script>
+</body>
+</html>

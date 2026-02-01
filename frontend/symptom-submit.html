@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <title>症状提交 - MediCare AI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            color: #333;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .avatar {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+        }
+
+        .nav {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+        }
+
+        .nav a {
+            padding: 10px 20px;
+            text-decoration: none;
+            color: #666;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .nav a:hover {
+            background: #f0f0f0;
+            color: #667eea;
+        }
+
+        .nav a.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .main-form {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-section {
+            margin-bottom: 30px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .form-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title::before {
+            content: '●';
+            color: #667eea;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+            font-family: inherit;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+            line-height: 1.6;
+        }
+
+        .symptom-duration {
+            display: flex;
+            gap: 12px;
+            align-items: stretch;
+        }
+
+        .duration-input-wrapper {
+            flex: 2;
+            position: relative;
+        }
+
+        .duration-input-wrapper input {
+            width: 100%;
+            padding: 15px 20px;
+            font-size: 20px;
+            font-weight: 600;
+            text-align: center;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            background: #fafafa;
+            transition: all 0.3s;
+        }
+
+        .duration-input-wrapper input:focus {
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        .duration-select-wrapper {
+            flex: 1.5;
+        }
+
+        .duration-select-wrapper select {
+            width: 100%;
+            height: 100%;
+            padding: 15px 20px;
+            font-size: 16px;
+            font-weight: 500;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .duration-select-wrapper select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        .file-upload {
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f8f9fa;
+        }
+
+        .file-upload:hover {
+            background: #e9ecef;
+            border-color: #764ba2;
+        }
+
+        .file-upload.dragover {
+            background: #e7f3ff;
+            border-color: #667eea;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .btn-submit {
+            flex: 2;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-reset {
+            flex: 1;
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-reset:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-cancel {
+            flex: 1;
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-cancel:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(220, 53, 69, 0.3);
+        }
+
+        .ai-result {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            margin-top: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+
+        .ai-result.show {
+            display: block;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .ai-result-title {
+            font-size: 22px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .ai-result-title::before {
+            content: '🤖';
+        }
+
+        .diagnosis-card {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .diagnosis-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .diagnosis-content {
+            line-height: 1.8;
+            color: #555;
+        }
+
+        .result {
+            padding: 20px;
+            border-radius: 8px;
+            display: none;
+            margin-top: 20px;
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        .result.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .result.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+            font-size: 18px;
+            color: #666;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 4px solid #667eea;
+            border-top-color: #764ba2;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .file-list {
+            margin-top: 15px;
+        }
+
+        .file-item {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .file-name {
+            flex: 1;
+        }
+
+        .file-remove {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .file-remove:hover {
+            background: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>症状提交</h1>
+            <div class="user-info">
+                <div class="avatar">患</div>
+                <span id="userName"></span>
+            </div>
+        </div>
+
+        <div class="nav">
+            <a href="index.html">首页</a>
+            <a href="user-profile.html">个人中心</a>
+            <a href="symptom-submit.html" class="active">症状提交</a>
+            <a href="medical-records.html">诊疗记录</a>
+        </div>
+
+        <div class="main-form">
+            <div class="form-section">
+                <div class="section-title">症状描述</div>
+                <div class="form-group">
+                    <label>主要症状（必填）</label>
+                    <textarea id="symptoms" rows="4" placeholder="请详细描述您的症状，例如：咳嗽一周，多在夜间加重，运动后症状明显"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>症状持续时间</label>
+                    <div class="symptom-duration">
+                        <div class="duration-input-wrapper">
+                            <input type="number" id="duration_value" placeholder="输入数值" min="0" step="1">
+                        </div>
+                        <div class="duration-select-wrapper">
+                            <select id="duration_unit">
+                                <option value="">选择单位</option>
+                                <option value="小时">小时</option>
+                                <option value="天">天</option>
+                                <option value="周">周</option>
+                                <option value="月">月</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>症状严重程度</label>
+                    <select id="severity">
+                        <option value="">请选择严重程度</option>
+                        <option value="轻微">轻微</option>
+                        <option value="轻度">轻度</option>
+                        <option value="中度">中度</option>
+                        <option value="重度">重度</option>
+                        <option value="严重">严重</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="section-title">检查资料上传</div>
+                <div class="form-group">
+                    <label>上传体检报告、X光片、CT片、验血单等（可选）</label>
+                    <div class="file-upload" id="fileDropZone">
+                        <div style="font-size: 48px; margin-bottom: 10px;">📄</div>
+                        <div>点击或拖拽文件到此处</div>
+                        <div style="color: #999; font-size: 14px; margin-top: 10px;">支持 PDF、图片、Word 文档</div>
+                        <input type="file" id="fileInput" multiple style="display: none;" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                    </div>
+                    <div class="file-list" id="fileList"></div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="section-title">其他信息</div>
+                <div class="form-group">
+                    <label>发病时间</label>
+                    <input type="datetime-local" id="onset_time">
+                </div>
+                <div class="form-group">
+                    <label>诱因（如果知道）</label>
+                    <textarea id="triggers" rows="2" placeholder="例如：接触过敏原、气候变化、运动后等"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>既往史相关疾病（可选）</label>
+                    <textarea id="previous_diseases" rows="2" placeholder="例如：曾经患过类似症状的疾病"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn-submit" onclick="submitSymptoms()">提交给AI诊断</button>
+            <button class="btn-reset" onclick="resetForm()">重置</button>
+            <a href="index.html" class="btn-cancel">取消并返回</a>
+        </div>
+
+        <div class="result" id="result"></div>
+
+        <div class="ai-result" id="aiResult">
+            <div class="ai-result-title">AI诊断结果</div>
+            <div class="diagnosis-card">
+                <div class="diagnosis-title">可能的诊断</div>
+                <div class="diagnosis-content" id="diagnosisContent">
+                    AI正在分析您的症状和资料...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://192.168.50.115:8000';
+        let uploadedFiles = [];
+
+        // 处理 401 错误
+        function handleUnauthorized() {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('user_name');
+            localStorage.removeItem('user_email');
+            localStorage.removeItem('user_id');
+            window.location.href = '/login.html';
+        }
+
+        // 检查用户登录状态
+        function checkAuth() {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                handleUnauthorized();
+            } else {
+                // 加载用户名
+                const userName = localStorage.getItem('user_name') || '患者';
+                document.getElementById('userName').textContent = userName;
+            }
+        }
+
+        // 文件拖放
+        const dropZone = document.getElementById('fileDropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        function handleFiles(files) {
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                uploadedFiles.push(file);
+            }
+            updateFileList();
+        }
+
+        function updateFileList() {
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = '';
+
+            uploadedFiles.forEach((file, index) => {
+                const item = document.createElement('div');
+                item.className = 'file-item';
+                item.innerHTML = `
+                    <span class="file-name">📎 ${file.name} (${formatFileSize(file.size)})</span>
+                    <button class="file-remove" onclick="removeFile(${index})">删除</button>
+                `;
+                fileList.appendChild(item);
+            });
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        function removeFile(index) {
+            uploadedFiles.splice(index, 1);
+            updateFileList();
+        }
+
+        // 提交症状
+        async function submitSymptoms() {
+            const token = localStorage.getItem('access_token');
+            const resultDiv = document.getElementById('result');
+            const aiResultDiv = document.getElementById('aiResult');
+
+            const symptoms = document.getElementById('symptoms').value;
+            const durationValue = document.getElementById('duration_value').value;
+            const durationUnit = document.getElementById('duration_unit').value;
+            const severity = document.getElementById('severity').value;
+            const onsetTime = document.getElementById('onset_time').value;
+            const triggers = document.getElementById('triggers').value;
+            const previousDiseases = document.getElementById('previous_diseases').value;
+
+            if (!symptoms.trim()) {
+                showResult('error', '请描述您的主要症状');
+                return;
+            }
+
+            const formData = {
+                symptoms: symptoms,
+                duration: durationValue ? `${durationValue}${durationUnit}` : '',
+                severity: severity,
+                onset_time: onsetTime,
+                triggers: triggers,
+                previous_diseases: previousDiseases,
+                files: uploadedFiles.map(f => f.name)
+            };
+
+            resultDiv.className = 'result info show';
+            resultDiv.innerHTML = '<span class="spinner"></span> 正在提交症状给AI分析...';
+
+            try {
+                // 调用真实AI诊断API
+                const response = await fetch(`${API_BASE}/api/v1/ai/comprehensive-diagnosis`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        symptoms: symptoms,
+                        severity: severity,
+                        duration: durationValue ? `${durationValue}${durationUnit}` : '',
+                        onset_time: onsetTime,
+                        triggers: triggers,
+                        previous_diseases: previousDiseases,
+                        uploaded_files: [],
+                        disease_category: 'respiratory'
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'AI诊断请求失败');
+                }
+
+                const result = await response.json();
+
+                showResult('success', 'AI诊断完成！');
+
+                // 上传文件（如果有）
+                if (uploadedFiles.length > 0 && result.case_id) {
+                    await uploadFiles(result.case_id);
+                }
+
+                // 显示AI诊断结果
+                displayAiResult({
+                    case_id: result.case_id,
+                    diagnosis: result.diagnosis,
+                    possible_causes: '详见AI诊断报告',
+                    recommendations: '请参考诊断建议',
+                    severity: severity,
+                    full_result: result
+                });
+
+            } catch (error) {
+                console.error('诊断错误:', error);
+                showResult('error', '提交失败：' + error.message);
+            }
+        }
+
+        // 上传文件
+        async function uploadFiles(caseId) {
+            const token = localStorage.getItem('access_token');
+
+            // 需要先创建一个病例才能上传文件
+            // 当前版本：模拟文件上传
+            console.log(`模拟上传 ${uploadedFiles.length} 个文件到病例 ${caseId}`);
+
+            for (const file of uploadedFiles) {
+                // 当前版本：仅记录日志
+                console.log(`文件 ${file.name} (${file.size} bytes) - 准备上传`);
+            }
+
+            return true;
+        }
+
+        // 显示AI诊断结果
+        function displayAiResult(data) {
+            const aiResultDiv = document.getElementById('aiResult');
+            const diagnosisContent = document.getElementById('diagnosisContent');
+
+            aiResultDiv.classList.add('show');
+
+            if (data.full_result && data.full_result.success) {
+                // 格式化显示完整诊断结果
+                const result = data.full_result;
+                const diagnosisText = result.diagnosis || '暂无诊断结果';
+                
+                // 将换行符转换为HTML
+                const formattedDiagnosis = diagnosisText
+                    .replace(/\n/g, '<br>')
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+                diagnosisContent.innerHTML = `
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 15px;">
+                        <h4 style="color: #667eea; margin-bottom: 15px;">🤖 AI 诊断报告</h4>
+                        <div style="line-height: 1.8; color: #333;">
+                            ${formattedDiagnosis}
+                        </div>
+                    </div>
+                    <div style="background: #e7f3ff; padding: 15px; border-radius: 8px; font-size: 14px;">
+                        <strong>📊 诊断信息：</strong><br>
+                        病例ID: ${result.case_id || 'N/A'}<br>
+                        模型: ${result.model_used || 'N/A'}<br>
+                        Token用量: ${result.tokens_used || 0}<br>
+                        诊断时间: ${new Date(result.created_at).toLocaleString('zh-CN')}
+                    </div>
+                `;
+            } else if (data.diagnosis) {
+                diagnosisContent.innerHTML = `
+                    <strong>诊断结果：</strong> ${data.diagnosis}<br><br>
+                    <strong>可能病因：</strong> ${data.possible_causes || '待分析'}<br><br>
+                    <strong>建议：</strong><br>
+                    ${data.recommendations || '建议前往医院进一步检查'}
+                `;
+            } else {
+                diagnosisContent.innerHTML = `
+                    AI分析中，请稍候...<br><br>
+                    <em>预计分析时间：2-5分钟</em>
+                `;
+            }
+        }
+
+        function showResult(type, message) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = `result ${type} show`;
+            resultDiv.innerHTML = message;
+        }
+
+        function resetForm() {
+            document.getElementById('symptoms').value = '';
+            document.getElementById('duration_value').value = '';
+            document.getElementById('duration_unit').value = '';
+            document.getElementById('severity').value = '';
+            document.getElementById('onset_time').value = '';
+            document.getElementById('triggers').value = '';
+            document.getElementById('previous_diseases').value = '';
+            uploadedFiles = [];
+            updateFileList();
+            document.getElementById('aiResult').classList.remove('show');
+            document.getElementById('result').classList.remove('show');
+        }
+
+        // 页面加载时检查登录状态
+        window.addEventListener('load', () => {
+            checkAuth();
+        });
+    </script>
+</body>
+</html>

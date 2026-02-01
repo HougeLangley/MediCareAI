@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <title>诊疗记录 - MediCare AI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            color: #333;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .avatar {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+        }
+
+        .nav {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+        }
+
+        .nav a {
+            padding: 10px 20px;
+            text-decoration: none;
+            color: #666;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .nav a:hover {
+            background: #f0f0f0;
+            color: #667eea;
+        }
+
+        .nav a.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .filter-bar {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .filter-group {
+            flex: 1;
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .filter-group input,
+        .filter-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .search-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .search-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .back-btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #6c757d, #5a6268);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+            margin-top: 20px;
+        }
+
+        .back-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .action-bar {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .records-list {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .record-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s;
+        }
+
+        .record-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .record-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .record-date {
+            font-size: 14px;
+            color: #999;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .record-status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .record-status.active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .record-status.completed {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .record-status.archived {
+            background: #e9ecef;
+            color: #6c757d;
+        }
+
+        .record-title {
+            font-size: 22px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .record-detail {
+            display: flex;
+            margin-bottom: 10px;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .detail-label {
+            font-weight: 500;
+            color: #555;
+            min-width: 80px;
+        }
+
+        .detail-value {
+            color: #333;
+            flex: 1;
+            line-height: 1.6;
+        }
+
+        .record-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .result {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            line-height: 1.6;
+        }
+
+        .result-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .result-content {
+            color: #555;
+        }
+
+        .btn-view {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-top: 15px;
+        }
+
+        .btn-view:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: #999;
+        }
+
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .empty-text {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        .empty-action {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+            font-size: 18px;
+            color: #666;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 4px solid #667eea;
+            border-top-color: #764ba2;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>诊疗记录</h1>
+            <div class="user-info">
+                <div class="avatar">患</div>
+                <span id="userName"></span>
+            </div>
+        </div>
+
+        <div class="nav">
+            <a href="index.html">首页</a>
+            <a href="user-profile.html">个人中心</a>
+            <a href="symptom-submit.html">症状提交</a>
+            <a href="medical-records.html" class="active">诊疗记录</a>
+        </div>
+
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label>关键词搜索</label>
+                <input type="text" id="searchKeyword" placeholder="搜索诊断、症状...">
+            </div>
+            <div class="filter-group">
+                <label>时间范围</label>
+                <select id="timeRange">
+                    <option value="">全部时间</option>
+                    <option value="7">最近7天</option>
+                    <option value="30">最近30天</option>
+                    <option value="90">最近3个月</option>
+                    <option value="180">最近6个月</option>
+                </select>
+            </div>
+            <button class="search-btn" onclick="loadRecords()">搜索</button>
+        </div>
+
+        <div class="records-list" id="recordsList">
+            <div class="loading">
+                <span class="spinner"></span> 加载中...
+            </div>
+        </div>
+
+        <div class="action-bar">
+            <a href="index.html" class="back-btn">← 返回主页</a>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://192.168.50.115:8000';
+
+        // 处理 401 错误
+        function handleUnauthorized() {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('user_name');
+            localStorage.removeItem('user_email');
+            localStorage.removeItem('user_id');
+            window.location.href = '/login.html';
+        }
+
+        // 检查用户登录状态
+        function checkAuth() {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                handleUnauthorized();
+            } else {
+                const userName = localStorage.getItem('user_name') || '患者';
+                document.getElementById('userName').textContent = userName;
+            }
+        }
+
+        // 加载诊疗记录
+        async function loadRecords() {
+            const token = localStorage.getItem('access_token');
+            const recordsList = document.getElementById('recordsList');
+
+            // 显示加载状态
+            recordsList.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-text">加载中...</div></div>';
+
+            // 加载病历记录
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/medical-cases/`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.status === 401) {
+                    handleUnauthorized();
+                    return;
+                }
+
+                if (response.ok) {
+                    const cases = await response.json();
+                    displayMedicalCases(cases);
+                } else {
+                    const error = await response.json();
+                    console.error('加载失败:', error);
+                    recordsList.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><div class="empty-text">加载失败：' + (error.detail || '未知错误') + '</div></div>';
+                }
+            } catch (error) {
+                console.error('加载失败:', error);
+                recordsList.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><div class="empty-text">加载失败：' + error.message + '</div></div>';
+            }
+        }
+
+        function displayMedicalCases(cases) {
+            const recordsList = document.getElementById('recordsList');
+
+            if (cases.length === 0) {
+                recordsList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📭</div>
+                        <div class="empty-text">暂无诊疗记录</div>
+                        <a href="symptom-submit.html" class="empty-action">提交症状进行AI诊断</a>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            cases.forEach(caseItem => {
+                const date = new Date(caseItem.created_at).toLocaleDateString('zh-CN', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                // 截断症状和诊断文本
+                const symptoms = caseItem.symptoms ? caseItem.symptoms.substring(0, 100) + '...' : '无症状描述';
+                const diagnosis = caseItem.diagnosis ? caseItem.diagnosis.substring(0, 150) + '...' : '诊断中...';
+
+                html += `
+                    <div class="record-card">
+                        <div class="record-header">
+                            <div class="record-date">
+                                📅 ${date}
+                            </div>
+                            <span class="record-status ${caseItem.status === 'active' ? 'active' : 'completed'}">${caseItem.status === 'active' ? '进行中' : '已完成'}</span>
+                        </div>
+                        <div class="record-title">${caseItem.title || 'AI诊疗记录'}</div>
+                        <div class="record-detail">
+                            <div class="detail-label">严重程度：</div>
+                            <div class="detail-value"><span class="severity-badge ${caseItem.severity}">${caseItem.severity || '未知'}</span></div>
+                        </div>
+                        <div class="record-detail">
+                            <div class="detail-label">症状：</div>
+                            <div class="detail-value">${symptoms}</div>
+                        </div>
+                        <div class="record-detail">
+                            <div class="detail-label">AI诊断：</div>
+                            <div class="detail-value" style="color: #667eea; font-style: italic;">${diagnosis}</div>
+                        </div>
+                        <button class="btn-view" onclick="viewCaseDetail('${caseItem.id}')">查看详情</button>
+                    </div>
+                `;
+            });
+
+            recordsList.innerHTML = html;
+        }
+
+        function viewCaseDetail(caseId) {
+            // 可以扩展为跳转到详情页面或显示模态框
+            alert(`查看病历详情\n病历ID: ${caseId}\n\n您可以在症状提交页面进行新的AI诊断。`);
+        }
+
+        // 显示记录列表（备用函数）
+        function displayRecords(records) {
+            const recordsList = document.getElementById('recordsList');
+
+            if (records.length === 0) {
+                recordsList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📭</div>
+                        <div class="empty-text">暂无诊疗记录</div>
+                        <a href="symptom-submit.html" class="empty-action">开始第一次症状提交</a>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            records.forEach(record => {
+                const date = new Date(record.created_at).toLocaleDateString('zh-CN', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+                const time = new Date(record.created_at).toLocaleTimeString('zh-CN', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                const statusClass = record.status || 'active';
+                const statusText = {
+                    'active': '进行中',
+                    'completed': '已完成',
+                    'archived': '已归档'
+                }[statusClass] || '进行中';
+
+                html += `
+                    <div class="record-card">
+                        <div class="record-header">
+                            <div class="record-date">
+                                📅 ${date} ${time}
+                            </div>
+                            <span class="record-status ${statusClass}">${statusText}</span>
+                        </div>
+                        <div class="record-title">${record.title || '诊疗记录'}</div>
+                        <div class="record-detail">
+                            <div class="detail-label">症状：</div>
+                            <div class="detail-value">${record.symptoms || '未记录'}</div>
+                        </div>
+                        <div class="record-detail">
+                            <div class="detail-label">诊断：</div>
+                            <div class="detail-value">${record.diagnosis || '待确认'}</div>
+                        </div>
+                        ${record.ai_recommendations ? `
+                        <div class="record-section">
+                            <div class="section-title">AI建议</div>
+                            <div class="result">
+                                <div class="result-title">AI分析结果</div>
+                                <div class="result-content">${record.ai_recommendations}</div>
+                            </div>
+                        </div>
+                        ` : ''}
+                        <button class="btn-view" onclick="viewRecord('${record.id}')">查看详情</button>
+                    </div>
+                `;
+            });
+
+            recordsList.innerHTML = html;
+        }
+
+        // 查看记录详情
+        function viewRecord(caseId) {
+            // 可以打开模态框或跳转到详情页面
+            alert('查看详情功能待实现，Case ID: ' + caseId);
+        }
+
+        // 页面加载时执行
+        window.addEventListener('load', () => {
+            checkAuth();
+            loadRecords();
+        });
+    </script>
+</body>
+</html>

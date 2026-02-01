@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+  # PostgreSQL数据库
+  postgres:
+    image: postgres:17-alpine
+    container_name: medicare_postgres
+    environment:
+      POSTGRES_DB: medicare_ai
+      POSTGRES_USER: medicare_user
+      POSTGRES_PASSWORD: medicare123456
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "0.0.0.0:5432:5432"
+    networks:
+      - medicare_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medicare_user -d medicare_ai"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis缓存
+  redis:
+    image: redis:7.4-alpine
+    container_name: medicare_redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    ports:
+      - "0.0.0.0:6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - medicare_network
+
+  # 后端API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: medicare_backend
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://medicare_user:medicare123456@medicare_postgres:5432/medicare_ai
+      REDIS_URL: redis://medicare123456@medicare_redis:6379/0
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      MINERU_TOKEN: ${MINERU_TOKEN}
+      AI_API_KEY: ${AI_API_KEY}
+      AI_API_URL: ${AI_API_URL}
+      DEBUG: true
+    ports:
+      - "0.0.0.0:8000:8000"
+    volumes:
+      - ./backend:/app
+      - uploads_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - medicare_network
+    restart: unless-stopped
+
+  # 前端应用
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: medicare_frontend
+    environment:
+      - CHOKIDAR_USE_POLLING=true
+    ports:
+      - "0.0.0.0:3000:3000"
+    volumes:
+      - ./frontend:/app:ro
+    networks:
+      - medicare_network
+    restart: unless-stopped
+
+  # Nginx反向代理
+  nginx:
+    build:
+      context: ./docker/nginx
+      dockerfile: Dockerfile
+    container_name: medicare_nginx
+    ports:
+      - "0.0.0.0:80:80"
+      - "0.0.0.0:443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./docker/nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - medicare_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  uploads_data:
+
+networks:
+  medicare_network:
+    driver: bridge

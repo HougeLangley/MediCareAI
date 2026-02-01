@@ -1,0 +1,166 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+.env/
+.python-version
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+!.env.example
+
+# Database
+*.db
+*.sqlite3
+*.sqlite
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Node.js
+node_modules/
+.npm
+.yarn-integrity
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# React / Frontend
+/frontend/build
+/frontend/dist
+/frontend/.env.local
+/frontend/.env.development.local
+/frontend/.env.test.local
+/frontend/.env.production.local
+/frontend/coverage
+/frontend/.next
+/frontend/out
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+*.sublime-project
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Uploads and media
+uploads/
+media/
+backend/uploads/
+data/uploads/*
+!data/uploads/.gitkeep
+
+# SSL certificates
+*.pem
+*.key
+*.crt
+*.csr
+*.der
+
+# Alembic migrations (optional - comment out if you want to track migrations)
+# /backend/alembic/versions/*.py
+# !backend/alembic/versions/__init__.py
+
+# Test coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+*.bak
+*.backup
+*~
+#*
+
+# Backup files
+backups/
+*.backup
+*.bkp
+
+# Knowledge base data (optional - if contains sensitive data)
+# /backend/data/knowledge_bases/**/*.md
+# /backend/data/knowledge_bases/**/*.json
+
+# Session files
+.sessions/
+*.session
+
+# Sisyphus / OpenCode specific
+.sisyphus/
+*.notepad
+
+# Local development overrides
+local/
+local.*
+dev.*
+override.*

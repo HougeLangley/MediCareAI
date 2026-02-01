@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediCare AI - 系统状态</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            margin: 0;
+            color: #667eea;
+            font-size: 32px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .demo-credentials {
+            background: #f0f0f0;
+            border-left: 4px solid #ff6b6b;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .demo-info-title {
+            font-weight: bold;
+            color: #ff6b6b;
+            margin-bottom: 15px;
+        }
+
+        .demo-info-item {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .credential-label {
+            font-weight: 500;
+            color: #555;
+        }
+
+        .credential-value {
+            color: #333;
+            font-weight: 500;
+            margin-left: 10px;
+        }
+
+        .copy-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+
+        .copy-btn:hover {
+            background: #5568d3;
+        }
+
+        .credential-note {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .section-divider {
+            height: 2px;
+            background: linear-gradient(to right, transparent 0%, #e0e0e0 20%, transparent 100%);
+            margin: 30px 0;
+        }
+
+        .page-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .page-link-card {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .page-link-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .link-icon {
+            font-size: 48px;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .link-info {
+            text-align: center;
+        }
+
+        .link-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .link-desc {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .demo-header {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .demo-header h3 {
+            margin: 0 0 15px 0;
+            font-size: 20px;
+            color: #667eea;
+        }
+
+        .credential-link {
+            display: inline-block;
+            margin-top: 15px;
+        }
+
+        .result {
+            padding: 20px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        .result.success {
+            background: #d4edda;
+            color: white;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            color: white;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 18px;
+            color: #666;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #667eea;
+            border-top-color: #764ba2;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏥 MediCare AI</h1>
+            <p class="subtitle">智能疾病管理系统</p>
+        </header>
+
+        <div class="demo-credentials">
+            <div class="demo-info-title">📋 面向患者的智能诊疗系统</div>
+            <p style="margin-bottom: 20px;">
+                本系统为患者提供智能诊疗建议，基于症状分析和 AI（MinerU + GLM-4.7）诊断模型
+            </p>
+            <div class="demo-info-item">
+                <span class="credential-label">邮箱：</span>
+                <span class="credential-value">demo@medicare.ai</span>
+                <button class="copy-btn" onclick="copyToClipboard('demo@medicare.ai')">复制</button>
+            </div>
+            <div class="demo-info-item">
+                <span class="credential-label">密码：</span>
+                <span class="credential-value">medicare123456</span>
+                <button class="copy-btn" onclick="copyToClipboard('medicare123456')">复制</button>
+            </div>
+            <div class="demo-info-item">
+                <span class="credential-label">姓名：</span>
+                <span class="credential-value">演示患者</span>
+            </div>
+            <p class="credential-note">
+                <a href="http://192.168.50.115:3000/login.html" class="credential-link">
+                    👉 点击跳转到患者登录页面
+                </a>
+            </p>
+        </div>
+
+        <div class="section-title">🎯 患者端页面</div>
+        <div class="page-links">
+            <div class="page-link-card">
+                <div class="link-icon">🏠</div>
+                <div class="link-info">
+                    <div class="link-title">首页</div>
+                    <div class="link-desc">欢迎页面和快速导航</div>
+                </div>
+            </div>
+            <div class="page-link-card">
+                <div class="link-icon">🔐</div>
+                <div class="link-info">
+                    <div class="link-title">登录</div>
+                    <div class="link-desc">患者登录页面</div>
+                </div>
+            </div>
+            <div class="page-link-card">
+                <div class="link-icon">📝</div>
+                <div class="link-info">
+                    <div class="link-title">症状提交</div>
+                    <div class="link-desc">描述症状并提交给AI诊断</div>
+                </div>
+            </div>
+            <div class="page-link-card">
+                <div class="link-icon">👤</div>
+                <div class="link-info">
+                    <div class="link-title">个人中心</div>
+                    <div class="link-desc">编辑个人信息和病史</div>
+                </div>
+            </div>
+            <div class="page-link-card">
+                <div class="link-icon">📋</div>
+                <div class="link-info">
+                    <div class="link-title">诊疗记录</div>
+                    <div class="link-desc">查看历史诊断记录</div>
+                </div>
+            </div>
+            <div class="page-link-card">
+                <div class="link-icon">📊</div>
+                <div class="link-info">
+                    <div class="link-title">健康档案</div>
+                    <div class="link-desc">健康趋势图表和统计数据</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://192.168.50.115:8000';
+        const FRONTEND_BASE = 'http://192.168.50.115:3000';
+
+        async function testBackendHealth() {
+            const backendStatus = document.getElementById('backend-status');
+            const dbStatus = document.getElementById('db-status');
+            const frontendStatus = document.getElementById('frontend-status');
+
+            backendStatus.textContent = '检查中...';
+            dbStatus.textContent = '检查中...';
+            frontendStatus.textContent = '检查中...';
+
+            try {
+                // 测试后端健康
+                const backendResponse = await fetch(`${API_BASE}/health`, {
+                    method: 'GET'
+                });
+
+                if (backendResponse.ok) {
+                    backendStatus.textContent = '✅ 正常';
+                    backendStatus.parentElement.classList.remove('error');
+                    backendStatus.parentElement.classList.add('success');
+                } else {
+                    backendStatus.textContent = '❌ 错误';
+                    backendStatus.parentElement.classList.add('error');
+                    backendStatus.parentElement.classList.remove('success');
+                }
+
+                // 测试数据库
+                const dbResponse = await fetch(`${API_BASE}/api/v1/diseases`);
+                if (dbResponse.ok) {
+                    dbStatus.textContent = '✅ 正常';
+                    dbStatus.parentElement.classList.remove('error');
+                    dbStatus.parentElement.classList.add('success');
+                } else {
+                    dbStatus.textContent = '❌ 错误';
+                    dbStatus.parentElement.classList.add('error');
+                    dbStatus.parentElement.classList.remove('success');
+                }
+
+                // 测试前端Web
+                const frontendResponse = await fetch(`${FRONTEND_BASE}/health`);
+                if (frontendResponse.ok) {
+                    frontendStatus.textContent = '✅ 正常';
+                    frontendStatus.classList.remove('error');
+                    frontendStatus.classList.add('success');
+                } else {
+                    frontendStatus.textContent = '❌ 错误';
+                    frontendStatus.classList.add('error');
+                    frontendStatus.classList.remove('success');
+                }
+
+            } catch (error) {
+                console.error('健康检查失败:', error);
+                document.getElementById('result').className = 'result error show';
+                document.getElementById('result').textContent = '健康检查失败：' + error.message;
+            }
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showResult('success', '已复制到剪贴板：' + text);
+            }).catch(err => {
+                showResult('error', '复制失败，请手动复制');
+            });
+        }
+
+        function showResult(type, message) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = `result ${type} show`;
+            resultDiv.textContent = message;
+        }
+
+        // 页面加载时自动测试健康
+        window.addEventListener('load', () => {
+            setTimeout(testBackendHealth, 500);
+        });
+    </script>
+</body>
+</html>

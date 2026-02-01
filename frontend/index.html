@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <title>MediCare AI - 智能诊疗助手</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px 35px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 36px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+        }
+
+        .user-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .welcome {
+            text-align: center;
+            margin: 50px 0 60px 0;
+            padding: 60px 40px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border-radius: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .welcome::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+            pointer-events: none;
+        }
+
+        .welcome h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #ffffff;
+            font-weight: 300;
+            letter-spacing: 2px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .welcome h1 .user-name-highlight {
+            color: #ffd700;
+            font-weight: 600;
+            display: inline-block;
+            padding: 5px 20px;
+            background: linear-gradient(135deg, rgba(255,215,0,0.3), rgba(255,215,0,0.1));
+            border-radius: 50px;
+            border: 2px solid rgba(255,215,0,0.5);
+            box-shadow: 0 4px 20px rgba(255,215,0,0.3);
+            margin: 0 10px;
+        }
+
+        .welcome p {
+            font-size: 20px;
+            color: rgba(255,255,255, 0.9);
+            font-weight: 300;
+            letter-spacing: 1px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .welcome-divider {
+            width: 100px;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+            margin: 30px auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .action-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .action-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+
+        .action-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .card-description {
+            font-size: 16px;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .card-button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .card-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .quick-info {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        .info-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .info-title::before {
+            content: '💡';
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .info-item {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .info-label {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .nav {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+            margin-bottom: 30px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .nav a {
+            padding: 12px 25px;
+            text-decoration: none;
+            color: #666;
+            border-radius: 8px;
+            transition: all 0.3s;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .nav a:hover {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .nav a.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .nav a::before {
+            margin-right: 8px;
+        }
+
+        .nav a[href^="index"]::before { content: '🏠'; }
+        .nav a[href^="user-profile"]::before { content: '👤'; }
+        .nav a[href^="symptom-submit"]::before { content: '📝'; }
+        .nav a[href^="medical-records"]::before { content: '📋'; }
+        .nav a.logout-btn::before { content: '🚪'; }
+
+        .footer {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.8);
+            margin-top: 40px;
+            padding: 20px;
+        }
+
+        .footer-text {
+            font-size: 14px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">MediCare AI</div>
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">患</div>
+                <span class="user-name" id="userName">欢迎您</span>
+            </div>
+        </div>
+
+        <div class="nav">
+            <a href="index.html" class="active">首页</a>
+            <a href="user-profile.html">个人中心</a>
+            <a href="symptom-submit.html">症状提交</a>
+            <a href="medical-records.html">诊疗记录</a>
+            <a href="#" onclick="logout(event)" class="logout-btn">退出</a>
+        </div>
+
+         <div class="welcome">
+             <h1 id="welcomeText">您好！</h1>
+             <div class="welcome-divider"></div>
+             <p>MediCare AI 您的智能健康助手</p>
+         </div>
+
+        <div class="action-cards">
+            <a href="symptom-submit.html" class="action-card">
+                <div class="card-icon">📝</div>
+                <div class="card-title">症状提交</div>
+                <div class="card-description">
+                    描述您的症状，AI 将基于 MinerU 和 GLM-4.7 模型为您进行智能诊断分析
+                </div>
+                <button class="card-button">开始诊断</button>
+            </a>
+
+            <a href="medical-records.html" class="action-card">
+                <div class="card-icon">📋</div>
+                <div class="card-title">诊疗记录</div>
+                <div class="card-description">
+                    查看您的历史诊疗记录、诊断历史和健康状况变化
+                </div>
+                <button class="card-button">查看记录</button>
+            </a>
+
+            <a href="user-profile.html" class="action-card">
+                <div class="card-icon">👤</div>
+                <div class="card-title">个人中心</div>
+                <div class="card-description">
+                    管理您的个人信息、基本资料、联系信息和健康档案
+                </div>
+                <button class="card-button">编辑信息</button>
+            </a>
+        </div>
+
+         <div class="quick-info">
+             <div class="info-title">快速了解</div>
+             <div class="info-grid">
+                 <div class="info-item">
+                     <div class="info-label">👥</div>
+                     <div class="info-value" id="totalCases">0</div>
+                     <div class="info-label">患者总数</div>
+                 </div>
+                 <div class="info-item">
+                     <div class="info-label">🏥</div>
+                     <div class="info-value" id="completedCases">0</div>
+                     <div class="info-label">管理患者</div>
+                 </div>
+                 <div class="info-item">
+                     <div class="info-label">📅</div>
+                     <div class="info-value" id="lastDate">--</div>
+                     <div class="info-label">今天日期</div>
+                 </div>
+                 <div class="info-item">
+                     <div class="info-label">⭐</div>
+                     <div class="info-value">AI 智能诊断</div>
+                 </div>
+             </div>
+         </div>
+
+        <div class="footer">
+            <p class="footer-text">
+                MediCare AI 使用先进的 AI 技术为您提供智能诊疗建议。<br>
+                本系统仅供参考，请以医生的实际诊断为准。
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://192.168.50.115:8000';
+
+        // 检查用户登录状态
+        function checkAuth() {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            // 加载用户信息
+            const userName = localStorage.getItem('user_name') || '患者';
+            document.getElementById('userName').textContent = userName;
+            document.getElementById('userAvatar').textContent = userName.charAt(0) || '患';
+
+            // 更新欢迎语
+            const welcomeText = document.getElementById('welcomeText');
+            if (welcomeText) {
+                welcomeText.innerHTML = `${userName}，您好！`;
+            }
+
+            // 加载快速统计数据
+            loadQuickStats();
+        }
+
+        // 处理 401 错误
+        function handleUnauthorized() {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('user_name');
+            localStorage.removeItem('user_email');
+            localStorage.removeItem('user_id');
+            window.location.href = '/login.html';
+        }
+
+        // 加载快速统计数据
+        async function loadQuickStats() {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                handleUnauthorized();
+                return;
+            }
+
+            try {
+                // 获取患者统计
+                const response = await fetch(`${API_BASE}/api/v1/patients/count`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.status === 401) {
+                    handleUnauthorized();
+                    return;
+                }
+
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('totalCases').textContent = data.count || 0;
+                    document.getElementById('completedCases').textContent = data.count || 0;
+                    document.getElementById('lastDate').textContent = new Date().toLocaleDateString('zh-CN');
+                }
+            } catch (error) {
+                console.error('加载统计数据失败:', error);
+            }
+        }
+
+         // 登出功能
+         async function logout() {
+             const token = localStorage.getItem('access_token');
+             
+             if (!token) {
+                 alert('您尚未登录');
+                 return;
+             }
+             
+             if (!confirm('确定要退出登录吗？')) {
+                 return;
+             }
+             
+             try {
+                  // 调用后端登出 API
+                  const response = await fetch(`${API_BASE}/api/v1/auth/logout`, {
+                      method: 'POST',
+                      headers: {
+                          'Authorization': `Bearer ${token}`
+                      }
+                  });
+                  
+                  // 无论 API 是否成功，都清除本地存储
+                  localStorage.removeItem('access_token');
+                  localStorage.removeItem('refresh_token');
+                  localStorage.removeItem('user_name');
+                  localStorage.removeItem('user_email');
+                  localStorage.removeItem('user_id');
+                  
+                  // 重置用户信息显示
+                  document.getElementById('userName').textContent = '欢迎您';
+                  document.getElementById('userAvatar').textContent = '患';
+                  document.getElementById('welcomeText').innerHTML = '您好！';
+                  
+                  // 跳转到登录页
+                  window.location.href = '/login.html';
+              } catch (error) {
+                  console.error('登出请求失败:', error);
+                  // 即使请求失败，也清除本地存储并跳转
+                  localStorage.removeItem('access_token');
+                  localStorage.removeItem('refresh_token');
+                  localStorage.removeItem('user_name');
+                  localStorage.removeItem('user_email');
+                  localStorage.removeItem('user_id');
+                  window.location.href = '/login.html';
+              }
+         }
+
+        // 页面加载时检查登录状态
+        window.addEventListener('load', () => {
+            checkAuth();
+        });
+    </script>
+</body>
+</html>

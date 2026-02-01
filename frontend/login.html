@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <title>MediCare AI - 用户登录</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 450px;
+            width: 100%;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .login-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .login-subtitle {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 20px;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
+        .demo-info {
+            background: #f0f0f0;
+            border-left: 4px solid #ff6b6b;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 30px;
+        }
+
+        .demo-info-title {
+            font-weight: bold;
+            color: #ff6b6b;
+            margin-bottom: 10px;
+        }
+
+        .demo-info-item {
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .copy-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+        }
+
+        .result.loading {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid #f3f3f3;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+        <div class="login-container">
+        <div class="login-header">
+            <div class="logo">🏥</div>
+            <h1 class="login-title">MediCare AI</h1>
+            <p class="login-subtitle">智能疾病管理系统</p>
+            
+            <!-- 项目介绍 -->
+            <div style="background: #f8f9fa; border-left: 4px solid #667eea; border-radius: 8px; padding: 15px; margin-bottom: 20px; margin-top: 20px;">
+                <h3 style="margin: 0 0 10px 0; font-size: 16px; color: #667eea;">📋 关于 MediCare AI</h3>
+                <p style="margin: 0; font-size: 14px; color: #555; line-height: 1.6;">
+                    MediCare AI 是一个依托人工智能技术实现的专业疾病管理系统。系统旨在对患者疾病进行定期随访和智能管理，
+                    集成 MinerU 文档抽取和 GLM-4.7 大语言模型，为医疗工作者提供强大的辅助诊断和治疗建议。
+                    支持全科室疾病管理，包括内科、外科、儿科、妇科等多个专业领域。
+                </p>
+            </div>
+        </div>
+
+
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">邮箱地址</label>
+                <input type="email" id="email" name="email" required
+                       placeholder="demo@medicare.ai" value="demo@medicare.ai">
+            </div>
+            <div class="form-group">
+                <label for="password">密码</label>
+                <input type="password" id="password" name="password" required
+                       placeholder="medicare123456" value="medicare123456">
+            </div>
+            <button type="submit" class="login-btn">
+                登录
+            </button>
+        </form>
+
+        <!-- 注册链接 -->
+        <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+            <p style="margin: 0; color: #666; font-size: 14px;">
+                还没有账号？
+                <a href="/register.html" style="color: #667eea; text-decoration: none; font-weight: bold;">立即注册</a>
+            </p>
+        </div>
+
+        <div id="result" class="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://192.168.50.115:8000';
+        let accessToken = '';
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('result');
+
+            if (!email || !password) {
+                showResult('error', '请填写完整的登录信息');
+                return;
+            }
+
+            // 显示加载状态
+            resultDiv.className = 'result loading show';
+            resultDiv.innerHTML = '<span class="spinner"></span> 正在登录...';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // 登录成功 - 适配新的 API 响应格式
+                    accessToken = data.tokens?.access_token || data.access_token;
+                    localStorage.setItem('access_token', accessToken);
+                    localStorage.setItem('refresh_token', data.tokens?.refresh_token || '');
+                    localStorage.setItem('user_email', email);
+                    localStorage.setItem('user_name', data.user?.full_name || data.full_name);
+                    localStorage.setItem('user_id', data.user?.id || '');
+
+                    showResult('success', '登录成功，正在跳转...');
+
+                    // 2秒后跳转到患者首页
+                    setTimeout(() => {
+                        window.location.href = '/index.html';
+                    }, 2000);
+                } else {
+                    // 登录失败
+                    const errorMsg = data.detail || '登录失败，请检查账号和密码';
+                    showResult('error', errorMsg);
+                }
+
+            } catch (error) {
+                showResult('error', '登录请求失败：' + error.message);
+            }
+        });
+
+        function showResult(type, message) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = `result ${type} show`;
+            resultDiv.innerHTML = `<strong>${message}</strong>`;
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('已复制到剪贴板：' + text);
+            }).catch(err => {
+                alert('复制失败，请手动复制');
+            });
+        }
+
+        // 检查是否已登录
+        window.addEventListener('load', () => {
+            const storedToken = localStorage.getItem('access_token');
+            if (storedToken) {
+                window.location.href = '/index.html';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <title>用户注册 - MediCare AI 智能疾病管理系统</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .registration-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+            padding: 40px;
+        }
+        
+        .registration-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .registration-header h1 {
+            color: #667eea;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .registration-header p {
+            color: #6c757d;
+            font-size: 16px;
+        }
+        
+        .form-label {
+            color: #2c3e50;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        
+        .form-control {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px 15px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+        
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-control.is-invalid {
+            border-color: #dc3545;
+        }
+        
+        .btn-register {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+        
+        .btn-register:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+        
+        .btn-register:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .btn-register:disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .login-link {
+            text-align: center;
+            margin-top: 20px;
+            color: #6c757d;
+        }
+        
+        .login-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .login-link a:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+        
+        .error-message {
+            color: #dc3545;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .success-message {
+            color: #198754;
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .form-group {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        
+        .form-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+            font-size: 16px;
+        }
+        
+        .password-toggle {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        
+        .password-toggle:hover {
+            color: #667eea;
+        }
+        
+
+    </style>
+</head>
+<body>
+    <div class="registration-container">
+        <div class="registration-header">
+            <h1>
+                <i class="bi bi-person-plus-fill"></i>
+                注册账户
+            </h1>
+            <p>加入 MediCare AI，开始智能诊疗之旅</p>
+        </div>
+        
+        <div id="error-message" class="error-message"></div>
+        <div id="success-message" class="success-message"></div>
+        
+        <form id="registration-form" onsubmit="handleRegistration(event)">
+            <div class="mb-3">
+                <label for="fullName" class="form-label">全名</label>
+                <div class="input-group">
+                    <i class="bi bi-person-fill form-icon"></i>
+                    <input type="text" class="form-control" id="fullName" name="fullName" 
+                           placeholder="请输入您的全名" required>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="email" class="form-label">邮箱地址</label>
+                <div class="input-group">
+                    <i class="bi bi-envelope-fill form-icon"></i>
+                    <input type="email" class="form-control" id="email" name="email" 
+                           placeholder="example@email.com" required>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="password" class="form-label">密码</label>
+                <div class="input-group">
+                    <i class="bi bi-lock-fill form-icon"></i>
+                    <input type="password" class="form-control" id="password" name="password" 
+                           placeholder="请输入密码" required minlength="6">
+                    <i class="bi bi-eye password-toggle" onclick="togglePassword('password')"></i>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="confirmPassword" class="form-label">确认密码</label>
+                <div class="input-group">
+                    <i class="bi bi-lock-fill form-icon"></i>
+                    <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" 
+                           placeholder="请再次输入密码" required minlength="6">
+                    <i class="bi bi-eye password-toggle" onclick="togglePassword('confirmPassword')"></i>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="dateOfBirth" class="form-label">出生日期</label>
+                <div class="input-group">
+                    <i class="bi bi-calendar-fill form-icon"></i>
+                    <input type="date" class="form-control" id="dateOfBirth" name="dateOfBirth" 
+                           required>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="gender" class="form-label">性别</label>
+                <div class="input-group">
+                    <i class="bi bi-gender-ambiguous form-icon"></i>
+                    <select class="form-select form-control" id="gender" name="gender" required>
+                        <option value="">请选择性别</option>
+                        <option value="male">男</option>
+                        <option value="female">女</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="phoneNumber" class="form-label">手机号码</label>
+                <div class="input-group">
+                    <i class="bi bi-telephone-fill form-icon"></i>
+                    <input type="tel" class="form-control" id="phoneNumber" name="phoneNumber" 
+                           placeholder="请输入手机号码" required>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="emergencyContactName" class="form-label">紧急联系人姓名</label>
+                <div class="input-group">
+                    <i class="bi bi-person-fill form-icon"></i>
+                    <input type="text" class="form-control" id="emergencyContactName" name="emergencyContactName" 
+                           placeholder="请输入紧急联系人姓名" required>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="emergencyContactPhone" class="form-label">紧急联系人电话</label>
+                <div class="input-group">
+                    <i class="bi bi-telephone-fill form-icon"></i>
+                    <input type="tel" class="form-control" id="emergencyContactPhone" name="emergencyContactPhone" 
+                           placeholder="请输入紧急联系人电话" required>
+                </div>
+            </div>
+            
+
+            
+            <div class="mb-3">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="terms" required>
+                    <label class="form-check-label" for="terms">
+                        我已阅读并同意 <a href="#">用户协议</a> 和 <a href="#">隐私政策</a>
+                    </label>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn-register" id="submit-btn">
+                <span id="submit-text">
+                    <i class="bi bi-person-plus-fill"></i>
+                    立即注册
+                </span>
+                <span id="loading-spinner" style="display: none;">
+                    <i class="bi bi-arrow-repeat-left"></i>
+                    注册中...
+                </span>
+            </button>
+        </form>
+        
+        <div class="login-link">
+            已有账号？<a href="login.html">立即登录</a>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // API Base URL - Backend API address
+        const API_BASE = 'http://192.168.50.115:8000';
+        
+        // Check if user is already logged in
+        function checkAuth() {
+            const token = localStorage.getItem('access_token');
+            const userName = localStorage.getItem('patient_name');
+            
+            if (token) {
+                // User is logged in, redirect to patient home
+                window.location.href = 'index.html';
+            }
+        }
+        
+        // Toggle password visibility
+        function togglePassword(fieldId) {
+            const field = document.getElementById(fieldId);
+            if (field.type === 'password') {
+                field.type = 'text';
+            } else {
+                field.type = 'password';
+            }
+        }
+        
+        // Handle registration form submission
+        async function handleRegistration(event) {
+            event.preventDefault();
+            
+            // Get form values
+            const fullName = document.getElementById('fullName').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const confirm_password = document.getElementById('confirmPassword').value;
+            const dateOfBirth = document.getElementById('dateOfBirth').value;
+            const gender = document.getElementById('gender').value;
+            const phoneNumber = document.getElementById('phoneNumber').value.trim();
+            const emergencyContactName = document.getElementById('emergencyContactName').value.trim();
+            const emergencyContactPhone = document.getElementById('emergencyContactPhone').value.trim();
+            const terms = document.getElementById('terms').checked;
+            
+            // Hide previous messages
+            document.getElementById('error-message').style.display = 'none';
+            document.getElementById('success-message').style.display = 'none';
+            
+            // Validation
+            if (!terms) {
+                showError('请同意用户协议和隐私政策');
+                return;
+            }
+            
+            if (!fullName) {
+                showError('请输入您的全名');
+                return;
+            }
+            
+            if (!email || !email.includes('@') || !email.includes('.')) {
+                showError('请输入有效的邮箱地址');
+                return;
+            }
+            
+            if (!password || password.length < 6) {
+                showError('密码长度至少为 6 个字符');
+                return;
+            }
+            
+            if (password !== confirm_password) {
+                showError('两次输入的密码不一致');
+                return;
+            }
+            
+            if (!dateOfBirth) {
+                showError('请输入出生日期');
+                return;
+            }
+            
+            if (!gender) {
+                showError('请选择性别');
+                return;
+            }
+            
+            if (!phoneNumber) {
+                showError('请输入手机号码');
+                return;
+            }
+            
+            if (!emergencyContactName) {
+                showError('请输入紧急联系人姓名');
+                return;
+            }
+            
+            if (!emergencyContactPhone) {
+                showError('请输入紧急联系人电话');
+                return;
+            }
+            
+            // Show loading state
+            const submitBtn = document.getElementById('submit-btn');
+            const submitText = document.getElementById('submit-text');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            
+            submitBtn.disabled = true;
+            submitText.style.display = 'none';
+            loadingSpinner.style.display = 'inline';
+            
+            try {
+                // Prepare registration data
+                const registrationData = {
+                    email: email,
+                    password: password,
+                    full_name: fullName,
+                    date_of_birth: dateOfBirth,
+                    gender: gender,
+                    phone: phoneNumber,
+                    emergency_contact_name: emergencyContactName,
+                    emergency_contact_phone: emergencyContactPhone
+                };
+                
+                // Call registration API
+                const response = await fetch(`${API_BASE}/api/v1/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(registrationData)
+                });
+
+                const result = await response.json();
+                
+                if (result.id) {
+                    // Registration successful
+                    showSuccess('注册成功！正在跳转到登录页面...');
+                    
+                    // Store user data
+                    localStorage.setItem('patient_email', result.email);
+                    localStorage.setItem('patient_name', result.full_name);
+                    localStorage.setItem('patient_id', result.id);
+                    
+                    // Redirect to login page after 2 seconds
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 2000);
+                } else {
+                    showError('注册失败：' + (result.detail || '未知错误'));
+                }
+                
+            } catch (error) {
+                console.error('注册错误:', error);
+                
+                let errorMessage = '注册失败，请稍后重试';
+                
+                if (error.message) {
+                    errorMessage = error.message;
+                } else if (error.response) {
+                    try {
+                        const errorData = await error.response.json();
+                        errorMessage = errorData.detail || errorData.message || errorMessage;
+                    } catch {
+                        errorMessage = `HTTP ${error.response.status}: ${error.statusText}`;
+                    }
+                }
+                
+                showError(errorMessage);
+            } finally {
+                // Reset submit button
+                submitBtn.disabled = false;
+                submitText.style.display = 'inline';
+                loadingSpinner.style.display = 'none';
+            }
+        }
+        
+        // Show error message
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            
+            // Scroll to error message
+            errorDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        
+        // Show success message
+        function showSuccess(message) {
+            const successDiv = document.getElementById('success-message');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+        }
+        
+        // Check authentication status on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuth();
+        });
+    </script>
+</body>
+</html>
