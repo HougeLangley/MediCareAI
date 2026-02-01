@@ -91,13 +91,10 @@ class User(Base):
     
     # Relationships | 关系
     patients = relationship("Patient", back_populates="user", 
-                           cascade="all, delete-orphan",
-                           comment="Associated patient profile / 关联的患者档案")
+                           cascade="all, delete-orphan")
     user_sessions = relationship("UserSession", back_populates="user",
-                                cascade="all, delete-orphan",
-                                comment="Active user sessions / 活跃用户会话")
-    audit_logs = relationship("AuditLog", back_populates="user",
-                             comment="User activity audit logs / 用户活动审计日志")
+                                cascade="all, delete-orphan")
+    audit_logs = relationship("AuditLog", back_populates="user")
 
 
 # =============================================================================
@@ -145,8 +142,7 @@ class Disease(Base):
                        comment="Record last update time / 记录最后更新时间")
     
     # Relationships | 关系
-    medical_cases = relationship("MedicalCase", back_populates="disease",
-                                comment="Associated medical cases / 关联的医疗病例")
+    medical_cases = relationship("MedicalCase", back_populates="disease")
 
 
 # =============================================================================
@@ -209,11 +205,9 @@ class Patient(Base):
                        comment="Record last update time / 记录最后更新时间")
     
     # Relationships | 关系
-    user = relationship("User", back_populates="patients",
-                       comment="Associated user account / 关联的用户账户")
+    user = relationship("User", back_populates="patients")
     medical_cases = relationship("MedicalCase", back_populates="patient",
-                                cascade="all, delete-orphan",
-                                comment="Patient's medical cases / 患者的医疗病例")
+                                cascade="all, delete-orphan")
 
 
 # =============================================================================
@@ -275,17 +269,12 @@ class MedicalCase(Base):
                        comment="Record last update time / 记录最后更新时间")
     
     # Relationships | 关系
-    patient = relationship("Patient", back_populates="medical_cases",
-                          comment="Associated patient / 关联的患者")
-    disease = relationship("Disease", back_populates="medical_cases",
-                          comment="Associated disease / 关联的疾病")
+    patient = relationship("Patient", back_populates="medical_cases")
+    disease = relationship("Disease", back_populates="medical_cases")
     medical_documents = relationship("MedicalDocument", back_populates="medical_case",
-                                    cascade="all, delete-orphan",
-                                    comment="Case documents / 病例文档")
-    ai_feedbacks = relationship("AIFeedback", back_populates="medical_case",
-                               comment="AI diagnosis results / AI 诊断结果")
-    follow_ups = relationship("FollowUp", back_populates="medical_case",
-                             comment="Follow-up appointments / 随访预约")
+                                    cascade="all, delete-orphan")
+    ai_feedbacks = relationship("AIFeedback", back_populates="medical_case")
+    follow_ups = relationship("FollowUp", back_populates="medical_case")
 
 
 # =============================================================================
@@ -343,8 +332,7 @@ class MedicalDocument(Base):
                        comment="Record last update time / 记录最后更新时间")
     
     # Relationships | 关系
-    medical_case = relationship("MedicalCase", back_populates="medical_documents",
-                               comment="Associated medical case / 关联的医疗病例")
+    medical_case = relationship("MedicalCase", back_populates="medical_documents")
 
 
 # =============================================================================
@@ -405,8 +393,7 @@ class AIFeedback(Base):
                        comment="Record last update time / 记录最后更新时间")
     
     # Relationships | 关系
-    medical_case = relationship("MedicalCase", back_populates="ai_feedbacks",
-                               comment="Associated medical case / 关联的医疗病例")
+    medical_case = relationship("MedicalCase", back_populates="ai_feedbacks")
 
 
 # =============================================================================
@@ -463,8 +450,7 @@ class FollowUp(Base):
                        comment="Record last update time / 记录最后更新时间")
     
     # Relationships | 关系
-    medical_case = relationship("MedicalCase", back_populates="follow_ups",
-                               comment="Associated medical case / 关联的医疗病例")
+    medical_case = relationship("MedicalCase", back_populates="follow_ups")
 
 
 # =============================================================================
@@ -508,8 +494,7 @@ class UserSession(Base):
                        comment="Session creation time / 会话创建时间")
     
     # Relationships | 关系
-    user = relationship("User", back_populates="user_sessions",
-                       comment="Associated user / 关联的用户")
+    user = relationship("User", back_populates="user_sessions")
 
 
 # =============================================================================
@@ -560,5 +545,4 @@ class AuditLog(Base):
                         comment="Log entry time / 日志条目时间")
     
     # Relationships | 关系
-    user = relationship("User", back_populates="audit_logs",
-                       comment="Associated user (if authenticated) / 关联的用户（如果已认证）")
+    user = relationship("User", back_populates="audit_logs")

@@ -11,6 +11,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.1] - 2025-02-01
+
+### Fixed | 修复
+
+#### Critical Bug Fixes | 关键错误修复
+- **Fixed SQLAlchemy relationship comment parameter error** / 修复 SQLAlchemy relationship comment 参数错误
+  - Removed unsupported `comment` parameter from all `relationship()` definitions / 从所有 `relationship()` 定义中移除不支持的 `comment` 参数
+  - Fixed backend container crash on startup / 修复后端容器启动时崩溃问题
+  - Affected 11 relationship definitions across models / 影响模型中的 11 处关系定义
+  - Error: `TypeError: RelationshipProperty.__init__() got an unexpected keyword argument 'comment'` / 错误：`TypeError: RelationshipProperty.__init__() got an unexpected keyword argument 'comment'`
+
+#### Documentation Updates | 文档更新
+- **Updated GLM_FLASH_SUCCESS_REPORT.md** / 更新 GLM_FLASH_SUCCESS_REPORT.md
+  - Converted to comprehensive local deployment guide / 转换为全面的本地部署指南
+  - Added deployment instructions for Ollama, llama.cpp, vLLM, SGLang, TGI / 添加 Ollama、llama.cpp、vLLM、SGLang、TGI 的部署说明
+  - Added local MinerU deployment guide / 添加本地 MinerU 部署指南
+  - Removed all sensitive information (IPs, API keys, tokens) / 移除所有敏感信息（IP、API 密钥、令牌）
+
+- **Added comprehensive bilingual documentation** / 添加全面的双语文档
+  - README.md with Chinese-English content / 包含中英文内容的 README.md
+  - DEPLOYMENT.md with detailed deployment instructions / 包含详细部署说明的 DEPLOYMENT.md
+  - ARCHITECTURE.md with system design documentation / 包含系统设计文档的 ARCHITECTURE.md
+  - API.md with complete API reference / 包含完整 API 参考的 API.md
+  - Comprehensive code comments in key files / 关键文件中的全面代码注释
+
+#### Security Improvements | 安全改进
+- **Sanitized all configuration files** / 清理所有配置文件
+  - Removed real API keys and tokens from .env.example / 从 .env.example 中移除真实 API 密钥和令牌
+  - Replaced with placeholder values / 替换为占位符值
+  - Removed sensitive files containing internal IPs and credentials / 移除包含内部 IP 和凭据的敏感文件
+
+#### Technical Memo | 技术备忘录
+- **Added TECHNICAL_MEMO_ISSUE_ANALYSIS.md** / 添加 TECHNICAL_MEMO_ISSUE_ANALYSIS.md
+  - Detailed incident report / 详细的事件报告
+  - Root cause analysis / 根本原因分析
+  - Solution and lessons learned / 解决方案和经验教训
+  - Preventive measures / 预防措施
+
+---
+
 ## [1.0.0] - 2025-02-01
 
 ### Added | 新增
