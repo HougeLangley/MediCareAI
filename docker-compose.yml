@@ -44,6 +44,8 @@ services:
       args:
         - USE_CN_MIRROR=${USE_CN_MIRROR:-false}
     container_name: medicare_backend
+    # 开发环境启用热重载
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     env_file:
       - .env
     environment:
