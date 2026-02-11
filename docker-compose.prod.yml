@@ -29,6 +29,8 @@ services:
 
   # 后端 API（生产优化）
   backend:
+    # 生产环境：多 worker，无热重载
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
     environment:
       # 生产环境关闭调试
       DEBUG: "false"
