@@ -3,16 +3,17 @@
 # MediCare_AI 数据备份脚本
 # 用于备份PostgreSQL数据库和上传的文件
 
-set -e
+set -euo pipefail
 
 # 配置
-BACKUP_DIR="/home/houge/Dev/MediCare_AI/backups"
+PROJECT_NAME="MediCareAI"
+BACKUP_DIR="${HOME}/${PROJECT_NAME}/backups"
 DATE=$(date +%Y%m%d_%H%M%S)
 BACKUP_NAME="medicare_ai_backup_${DATE}"
 DB_CONTAINER="medicare_postgres"
 DB_NAME="medicare_ai"
 DB_USER="medicare_user"
-UPLOAD_DIR="/home/houge/Dev/MediCare_AI/uploads"
+UPLOAD_DIR="${HOME}/${PROJECT_NAME}/uploads"
 
 echo "🗄️ 开始备份 MediCare_AI 数据..."
 
