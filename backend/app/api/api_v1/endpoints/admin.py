@@ -21,6 +21,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timedelta
 from uuid import UUID
+import uuid
 import json
 import os
 import asyncio
@@ -1120,26 +1121,35 @@ async def upload_knowledge_base_document(
         )
     
     try:
-        # Create upload directory if it doesn't exist
-        upload_dir = Path("/app/uploads/knowledge_base")
-        upload_dir.mkdir(parents=True, exist_ok=True)
+        # Save to unified knowledge base directory
+        from app.services.unified_kb_service import get_unified_knowledge_loader
         
-        # Generate unique filename
-        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-        safe_filename = f"{timestamp}_{file.filename}"
-        file_path = upload_dir / safe_filename
+        kb_loader = get_unified_knowledge_loader()
+        unified_dir = kb_loader.unified_root
+        unified_dir.mkdir(parents=True, exist_ok=True)
         
-        # Save file
-        async with aiofiles.open(file_path, 'wb') as f:
-            content = await file.read()
-            await f.write(content)
+        # Use original filename (cleaned)
+        safe_filename = file.filename.replace(' ', '_')
+        file_path = unified_dir / safe_filename
         
-        # In a real implementation, you would:
-        # 1. Create a database record for the document
-        # 2. Start a background task to process the document (chunking, vectorization)
-        # 3. Update the document status
+        # Read content
+        content = await file.read()
+        content_str = content.decode('utf-8')
         
-        doc_id = str(UUID(int=0))  # Placeholder - in real implementation, generate proper ID
+        # Save file to unified directory
+        async with aiofiles.open(file_path, 'w', encoding='utf-8') as f:
+            await f.write(content_str)
+        
+        # Generate document ID
+        doc_id = str(uuid.uuid4())
+        
+        # Add to unified KB metadata (auto-infer category and tags)
+        kb_loader.add_document(
+            filename=safe_filename,
+            content=content_str,
+            title=safe_filename.replace('.md', ''),
+            source=f"admin_upload_{admin.email}"
+        )
         
         # Log the upload
         admin_logger = AdminOperationLogger(db)
@@ -1150,33 +1160,42 @@ async def upload_knowledge_base_document(
                 "filename": file.filename,
                 "file_size": len(content),
                 "doc_id": doc_id,
-                "safe_filename": safe_filename
+                "safe_filename": safe_filename,
+                "location": str(file_path)
             },
             ip_address=request.client.host if request else "unknown",
             user_agent=request.headers.get("user-agent") if request else "unknown"
         )
         
-        # Start background processing (simulated)
-        asyncio.create_task(_process_knowledge_document(doc_id, file_path, db))
+        # Start REAL background processing for vectorization
+        asyncio.create_task(_vectorize_knowledge_document(doc_id, safe_filename, content_str, admin.id))
         
         return KnowledgeBaseUploadResponse(
             success=True,
             doc_id=doc_id,
             filename=file.filename,
             status="processing",
-            message="Document uploaded successfully and processing started",
+            message="文档上传成功，正在向量化处理中 | Document uploaded and vectorization started",
             timestamp=datetime.utcnow()
         )
     
     except Exception as e:
+        # Log error with full traceback
+        import traceback
+        error_detail = str(e)
+        traceback_str = traceback.format_exc()
+        logger.error(f"❌ Upload failed: {error_detail}")
+        logger.error(f"Traceback: {traceback_str}")
+        
         # Log error
         admin_logger = AdminOperationLogger(db)
         await admin_logger.log_operation(
             admin_id=admin.id,
             operation_type="upload_knowledge_document_failed",
             operation_details={
-                "filename": file.filename,
-                "error": str(e)
+                "filename": file.filename if file else "unknown",
+                "error": error_detail,
+                "traceback": traceback_str[:500]
             },
             ip_address=request.client.host if request else "unknown",
             user_agent=request.headers.get("user-agent") if request else "unknown"
@@ -1184,7 +1203,7 @@ async def upload_knowledge_base_document(
         
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to upload document: {str(e)}"
+            detail=f"Failed to upload document: {error_detail}"
         )
 
 
@@ -1199,76 +1218,95 @@ async def get_knowledge_base_documents(
     """
     Get knowledge base documents | 获取知识库文档列表
     
-    Returns a list of all knowledge base documents with their status.
-    返回所有知识库文档的列表及其状态。
+    Returns a list of all knowledge base documents with real status from unified KB.
+    从统一知识库返回所有文档列表及其真实状态。
     """
     try:
-        # In a real implementation, you would query the database
-        # For now, we'll return a simulated response
+        from app.services.unified_kb_service import get_unified_knowledge_loader
+        from sqlalchemy import text
         
-        # Simulate document data
+        # Get unified KB loader
+        kb_loader = get_unified_knowledge_loader()
+        
+        # Get document list from metadata
+        all_docs = kb_loader.list_documents()
+        total_count = len(all_docs)
+        
+        # Get real chunk counts from vector database
+        chunk_counts = {}
+        try:
+            result = await db.execute(text("""
+                SELECT document_title, COUNT(*) as chunk_count
+                FROM knowledge_base_chunks
+                WHERE source_type = 'unified_kb'
+                GROUP BY document_title
+            """))
+            for row in result.fetchall():
+                chunk_counts[row[0]] = row[1]
+        except Exception as e:
+            logger.error(f"Failed to query chunk counts: {e}")
+        
+        # Build document list
         documents = []
-        upload_dir = Path("/app/uploads/knowledge_base")
-        
-        if upload_dir.exists():
-            # List all .md files
-            md_files = list(upload_dir.glob("*.md"))
-            total_count = len(md_files)
+        for i, doc_meta in enumerate(all_docs[skip:skip+limit]):
+            filename = doc_meta.get('filename', 'unknown')
+            title = doc_meta.get('title', filename)
             
-            for i, file_path in enumerate(md_files[skip:skip+limit]):
-                # Get file info
+            # Get file info
+            file_path = kb_loader.unified_root / filename
+            if file_path.exists():
                 stat = file_path.stat()
-                
-                # Simulate status based on filename timestamp
-                filename_parts = file_path.stem.split('_', 1)
-                if len(filename_parts) >= 2:
-                    timestamp_str = filename_parts[0]
-                    try:
-                        file_time = datetime.strptime(timestamp_str, "%Y%m%d_%H%M%S")
-                    except:
-                        file_time = datetime.fromtimestamp(stat.st_mtime)
-                    
-                    # Simulate processing status
-                    time_diff = datetime.utcnow() - file_time
-                    if time_diff.total_seconds() < 60:
-                        status = "processing"
-                        chunk_count = 0
-                    elif time_diff.total_seconds() < 300:
-                        status = "completed"
-                        chunk_count = 10  # Simulated
-                    else:
-                        status = "completed"
-                        chunk_count = 15  # Simulated
+                file_size = stat.st_size
+                file_mtime = datetime.fromtimestamp(stat.st_mtime)
+            else:
+                file_size = doc_meta.get('file_size', 0)
+                file_mtime = datetime.fromisoformat(doc_meta.get('added_at', datetime.utcnow().isoformat()))
+            
+            # Check vectorization status
+            real_chunk_count = chunk_counts.get(title, 0)
+            
+            # Determine status
+            if real_chunk_count > 0:
+                status = "completed"
+                processed_at = file_mtime
+            elif doc_meta.get('added_at'):
+                added_time = datetime.fromisoformat(doc_meta.get('added_at'))
+                time_diff = (datetime.utcnow() - added_time).total_seconds()
+                if time_diff < 300:  # Less than 5 minutes
+                    status = "processing"
+                    processed_at = None
                 else:
                     status = "failed"
-                    chunk_count = 0
-                    file_time = datetime.fromtimestamp(stat.st_mtime)
-                
-                # Generate preview
-                try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        content = f.read()
-                        preview = content[:200] + "..." if len(content) > 200 else content
-                except:
+                    processed_at = None
+            else:
+                status = "processing"
+                processed_at = None
+            
+            # Generate preview from actual content
+            try:
+                doc_obj = kb_loader.load_document(filename)
+                if doc_obj and doc_obj.content:
+                    preview = doc_obj.content[:200] + "..." if len(doc_obj.content) > 200 else doc_obj.content
+                else:
                     preview = "Preview unavailable"
-                
-                doc = KnowledgeBaseDocument(
-                    doc_id=str(i + 1),  # Simulated ID
-                    filename=file_path.name,
-                    file_size=stat.st_size,
-                    status=status,
-                    chunk_count=chunk_count,
-                    uploaded_at=file_time,
-                    processed_at=file_time if status == "completed" else None,
-                    file_type="markdown",
-                    preview=preview
-                )
-                
-                # Apply status filter
-                if status_filter is None or doc.status == status_filter:
-                    documents.append(doc)
-        else:
-            total_count = 0
+            except:
+                preview = "Preview unavailable"
+            
+            doc = KnowledgeBaseDocument(
+                doc_id=str(i + skip + 1),
+                filename=filename,
+                file_size=file_size,
+                status=status,
+                chunk_count=real_chunk_count,
+                uploaded_at=file_mtime,
+                processed_at=processed_at,
+                file_type="markdown",
+                preview=preview
+            )
+            
+            # Apply status filter
+            if status_filter is None or doc.status == status_filter:
+                documents.append(doc)
         
         return KnowledgeBaseDocumentsResponse(
             documents=documents,
@@ -1277,6 +1315,9 @@ async def get_knowledge_base_documents(
         )
     
     except Exception as e:
+        logger.error(f"Failed to retrieve documents: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve documents: {str(e)}"
@@ -1395,33 +1436,38 @@ async def delete_knowledge_base_document(
     删除知识库文档及其相关的向量数据。
     """
     try:
-        # In a real implementation, you would:
-        # 1. Find the document in the database
-        # 2. Delete associated vector embeddings from KnowledgeBaseChunk table
-        # 3. Delete the file from storage
-        # 4. Remove database records
+        from app.services.unified_kb_service import get_unified_knowledge_loader
+        from sqlalchemy import text
         
-        # For now, we'll simulate deletion
-        upload_dir = Path("/app/uploads/knowledge_base")
+        # Get unified KB loader
+        kb_loader = get_unified_knowledge_loader()
         
-        # Try to find and delete the file
-        file_deleted = False
-        deleted_filename = None
+        # Get all documents and find by index (sync operation)
+        all_docs = kb_loader.list_documents()
+        doc_index = int(doc_id) - 1  # Convert to 0-based index
         
-        if upload_dir.exists():
-            md_files = list(upload_dir.glob("*.md"))
-            for i, file_path in enumerate(md_files):
-                if str(i + 1) == doc_id or file_path.stem.endswith(doc_id):
-                    deleted_filename = file_path.name
-                    file_path.unlink()
-                    file_deleted = True
-                    break
-        
-        if not file_deleted:
+        if doc_index < 0 or doc_index >= len(all_docs):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Document {doc_id} not found"
             )
+        
+        doc_meta = all_docs[doc_index]
+        filename = doc_meta.get('filename')
+        title = doc_meta.get('title', filename)
+        
+        # Delete from unified KB (removes file and metadata) - run in thread to avoid blocking
+        import asyncio
+        delete_result = await asyncio.to_thread(kb_loader.delete_document, filename)
+        
+        if not delete_result:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to delete document {doc_id}"
+            )
+        
+        deleted_filename = filename
+        file_deleted = True
         
         # Log the deletion
         admin_logger = AdminOperationLogger(db)
@@ -1467,26 +1513,90 @@ async def delete_knowledge_base_document(
         )
 
 
-async def _process_knowledge_document(doc_id: str, file_path: Path, db: AsyncSession) -> None:
+async def _vectorize_knowledge_document(doc_id: str, filename: str, content: str, admin_id: int) -> None:
     """
-    Background task to process knowledge document | 后台任务：处理知识文档
+    Background task to vectorize knowledge document | 后台任务：向量化知识文档
+    
+    This function runs in the background to:
+    1. Parse markdown content
+    2. Chunk the content into segments
+    3. Generate vector embeddings using Qwen/Aliyun API
+    4. Store in vector database (PostgreSQL with pgvector)
     """
+    from app.db.database import AsyncSessionLocal
+    from app.services.unified_kb_service import get_unified_knowledge_loader
+    from app.services.kb_vectorization_service import KnowledgeBaseVectorizationService
+    from app.services.vector_embedding_service import VectorEmbeddingService
+    
     try:
-        # Simulate processing delay
-        await asyncio.sleep(30)
+        logger.info(f"🔄 [Background] Starting vectorization for document {doc_id}: {filename}")
         
-        # In a real implementation, this would:
-        # 1. Read and parse the markdown file
-        # 2. Chunk the content
-        # 3. Generate vector embeddings
-        # 4. Store in vector database
-        # 5. Update document status in database
-        
-        print(f"Processed knowledge document {doc_id}: {file_path}")
+        # Create new DB session for background task
+        async with AsyncSessionLocal() as db:
+            try:
+                # First, check if there's an active vector embedding configuration
+                vector_service = VectorEmbeddingService(db)
+                try:
+                    config = await vector_service.get_active_config()
+                    if not config:
+                        logger.error(f"❌ [Background] No active vector embedding configuration found. Please configure one in Admin > AI Model Settings.")
+                        return
+                    logger.info(f"✅ [Background] Using vector config: {config.name} ({config.provider}/{config.model_id})")
+                except Exception as config_error:
+                    logger.error(f"❌ [Background] Failed to get vector config: {config_error}")
+                    return
+                
+                # Get document info from unified KB
+                kb_loader = get_unified_knowledge_loader()
+                doc = kb_loader.load_document(filename)
+                
+                if not doc:
+                    logger.error(f"❌ [Background] Document not found in KB: {filename}")
+                    return
+                
+                logger.info(f"📄 [Background] Document loaded: {doc.title}, size: {len(doc.content)} chars")
+                
+                # Initialize vectorization service
+                kb_service = KnowledgeBaseVectorizationService(db)
+                
+                # Perform vectorization
+                logger.info(f"🔤 [Background] Starting embedding generation...")
+                result = await kb_service.vectorize_markdown_document(
+                    document_content=doc.content,
+                    document_title=doc.title,
+                    disease_category=doc.category,
+                    disease_id=None,  # Not linked to specific disease
+                    source_type='unified_kb',
+                    created_by=admin_id
+                )
+                
+                logger.info(
+                    f"✅ [Background] Vectorization complete for {filename}: "
+                    f"{result.get('new_chunks', 0)} chunks created, "
+                    f"{result.get('total_chunks', 0)} total"
+                )
+                
+            except Exception as e:
+                logger.error(f"❌ [Background] Vectorization failed for {filename}: {e}")
+                import traceback
+                logger.error(f"[Background] Traceback: {traceback.format_exc()}")
+                await db.rollback()
+                raise
     
     except Exception as e:
-        print(f"Failed to process knowledge document {doc_id}: {str(e)}")
-        # In real implementation, update status to 'failed'
+        logger.error(f"❌ [Background] Task failed for document {doc_id}: {e}")
+        import traceback
+        logger.error(f"[Background] Traceback: {traceback.format_exc()}")
+
+
+# Keep old function name for backward compatibility
+async def _process_knowledge_document(doc_id: str, file_path: Path, db: AsyncSession) -> None:
+    """
+    [DEPRECATED] Use _vectorize_knowledge_document instead
+    Background task to process knowledge document
+    """
+    logger.warning("_process_knowledge_document is deprecated, use _vectorize_knowledge_document")
+    pass
 
 
 # System Settings Management | 系统设置管理

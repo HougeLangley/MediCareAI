@@ -27,6 +27,9 @@ AsyncSessionLocal = async_sessionmaker(
     autoflush=False,
 )
 
+# Export async_session_maker for background tasks
+async_session_maker = AsyncSessionLocal
+
 async def get_db():
     """获取数据库会话"""
     db = AsyncSessionLocal()

@@ -1,0 +1,28 @@
+{
+  "name": "消化系统疾病",
+  "name_en": "Digestive System Diseases",
+  "category": "digestive",
+  "diseases": [
+    {
+      "code": "acute_gastroenteritis",
+      "name": "急性胃肠炎",
+      "name_en": "Acute Gastroenteritis",
+      "description": "胃肠道黏膜急性炎症，主要表现为腹泻、呕吐、腹痛",
+      "keywords": ["腹泻", "呕吐", "腹痛", "急性胃肠炎", "肠胃炎", "拉肚子"],
+      "severity": "common",
+      "contagious": true
+    }
+  ],
+  "documents": [
+    {
+      "title": "急性胃肠炎诊疗指南",
+      "file": "acute_gastroenteritis.md",
+      "type": "guideline",
+      "description": "急性胃肠炎的诊断、治疗及预防指南"
+    }
+  ],
+  "version": "1.0.0",
+  "last_updated": "2024-02-01",
+  "source": "中国急性胃肠炎诊治指南（2020版）",
+  "active": true
+}

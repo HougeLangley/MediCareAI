@@ -96,6 +96,95 @@ class AIModelConfigService:
         configs = result.scalars().all()
         return {config.model_type: config for config in configs}
     
+    def _update_env_file(self, model_type: str, api_url: str, api_key: str, model_id: str) -> bool:
+        """
+        Update .env file with new configuration | 更新.env文件
+        
+        Args:
+            model_type: Model type identifier
+            api_url: API endpoint URL
+            api_key: API key
+            model_id: Model identifier
+            
+        Returns:
+            True if updated successfully
+        """
+        try:
+            # Find .env file path
+            env_paths = [
+                "/app/.env",  # Docker container path
+                os.path.join(os.getcwd(), ".env"),  # Current working directory
+                os.path.join(os.path.dirname(__file__), "..", "..", "..", ".env"),  # Relative to service
+            ]
+            
+            env_file = None
+            for path in env_paths:
+                if os.path.exists(path):
+                    env_file = path
+                    break
+            
+            if not env_file:
+                logger.warning("Could not find .env file to update")
+                return False
+            
+            # Map model_type to environment variable names
+            env_mappings = {
+                "diagnosis": {
+                    "AI_API_URL": api_url,
+                    "AI_API_KEY": api_key,
+                    "AI_MODEL_ID": model_id
+                },
+                "mineru": {
+                    "MINERU_TOKEN": api_key
+                },
+                "embedding": {
+                    "EMBEDDING_API_URL": api_url,
+                    "EMBEDDING_API_KEY": api_key,
+                    "EMBEDDING_MODEL_ID": model_id
+                }
+            }
+            
+            updates = env_mappings.get(model_type)
+            if not updates:
+                logger.warning(f"No .env mapping for model type: {model_type}")
+                return False
+            
+            # Read current .env content
+            with open(env_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # Update each variable
+            for key, value in updates.items():
+                # Escape special characters for regex
+                escaped_key = key.replace('$', '\\$')
+                
+                # Check if variable already exists
+                pattern = f"^{escaped_key}=.*$"
+                import re
+                if re.search(pattern, content, re.MULTILINE):
+                    # Update existing variable
+                    content = re.sub(pattern, f"{key}={value}", content, flags=re.MULTILINE)
+                    logger.info(f"Updated {key} in .env file")
+                else:
+                    # Add new variable
+                    content += f"\n{key}={value}\n"
+                    logger.info(f"Added {key} to .env file")
+            
+            # Write updated content back
+            with open(env_file, 'w', encoding='utf-8') as f:
+                f.write(content)
+            
+            # Also update current process environment
+            for key, value in updates.items():
+                os.environ[key] = value
+            
+            logger.info(f"Successfully updated .env file for {model_type}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to update .env file: {str(e)}")
+            return False
+
     async def save_config(
         self,
         model_type: str,
@@ -140,6 +229,10 @@ class AIModelConfigService:
             await self.db.commit()
             await self.db.refresh(existing)
             logger.info(f"Updated AI model configuration: {model_type}")
+            
+            # Update .env file
+            self._update_env_file(model_type, api_url, api_key, model_id)
+            
             return existing
         else:
             # Create new
@@ -156,6 +249,10 @@ class AIModelConfigService:
             await self.db.commit()
             await self.db.refresh(config)
             logger.info(f"Created AI model configuration: {model_type}")
+            
+            # Update .env file
+            self._update_env_file(model_type, api_url, api_key, model_id)
+            
             return config
     
     async def update_test_status(

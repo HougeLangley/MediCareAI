@@ -1,0 +1,117 @@
+{
+  "name": "统一医学知识库",
+  "name_en": "Unified Medical Knowledge Base",
+  "description": "包含所有医学领域的诊疗指南和知识文档",
+  "version": "2.0.0",
+  "structure": "unified",
+  "created_at": "2024-02-11",
+  "updated_at": "2026-02-12T09:21:11.929386",
+  "documents": [
+    {
+      "filename": "儿童暴发性心肌炎诊治专家建议（2025）.md",
+      "title": "儿童暴发性心肌炎诊治专家建议（2025）",
+      "category": "cardiovascular",
+      "tags": [
+        "指南",
+        "儿童",
+        "诊断",
+        "治疗"
+      ],
+      "source": "admin_upload_admin@medicare.ai",
+      "file_size": 57974,
+      "added_at": "2026-02-11T23:12:43.014673"
+    },
+    {
+      "filename": "儿童肺炎支原体肺炎诊疗指南（2025年版）.md",
+      "title": "儿童肺炎支原体肺炎诊疗指南（2025年版）",
+      "category": "respiratory",
+      "tags": [
+        "指南",
+        "儿童"
+      ],
+      "source": "admin_upload_admin@medicare.ai",
+      "file_size": 46939,
+      "added_at": "2026-02-11T23:13:38.691775"
+    },
+    {
+      "filename": "儿童急性感染性腹泻病诊疗规范（2020年版）.md",
+      "title": "儿童急性感染性腹泻病诊疗规范（2020年版）",
+      "category": "digestive",
+      "tags": [
+        "指南",
+        "规范",
+        "儿童",
+        "急性",
+        "治疗"
+      ],
+      "source": "admin_upload_admin@medicare.ai",
+      "file_size": 35467,
+      "added_at": "2026-02-11T23:14:24.069946"
+    },
+    {
+      "filename": "儿童急性呼吸道感染病原学诊断与临床管理专家共识（2025版）.md",
+      "title": "儿童急性呼吸道感染病原学诊断与临床管理专家共识（2025版）",
+      "category": "respiratory",
+      "tags": [
+        "指南",
+        "规范",
+        "儿童",
+        "急性",
+        "诊断"
+      ],
+      "source": "admin_upload_admin@medicare.ai",
+      "file_size": 78967,
+      "added_at": "2026-02-11T23:14:54.422251"
+    },
+    {
+      "filename": "轮状病毒相关中枢神经系统并发症的发生机制研究进展.md",
+      "title": "轮状病毒相关中枢神经系统并发症的发生机制研究进展",
+      "category": "digestive",
+      "tags": [
+        "儿童",
+        "治疗"
+      ],
+      "source": "admin_upload_admin@medicare.ai",
+      "file_size": 27694,
+      "added_at": "2026-02-12T06:57:46.229955"
+    },
+    {
+      "filename": "儿童支气管哮喘规范化诊治建议（2020年版）.md",
+      "title": "儿童支气管哮喘规范化诊治建议（2020年版）",
+      "category": "respiratory",
+      "tags": [
+        "指南",
+        "规范",
+        "儿童",
+        "诊断"
+      ],
+      "source": "admin_upload_admin@medicare.ai",
+      "file_size": 55327,
+      "added_at": "2026-02-12T09:20:30.604113"
+    },
+    {
+      "filename": "儿童支气管哮喘诊断与防治指南（2025）.md",
+      "title": "儿童支气管哮喘诊断与防治指南（2025）",
+      "category": "respiratory",
+      "tags": [
+        "指南",
+        "规范",
+        "儿童",
+        "诊断",
+        "治疗"
+      ],
+      "source": "admin_upload_admin@medicare.ai",
+      "file_size": 71284,
+      "added_at": "2026-02-12T09:21:11.929357"
+    }
+  ],
+  "stats": {
+    "total_documents": 7,
+    "categories": [
+      "digestive",
+      "cardiovascular",
+      "respiratory"
+    ],
+    "last_updated": "2026-02-12T09:21:11.929382"
+  }
+}

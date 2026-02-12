@@ -1,18 +1,21 @@
 """
-MinerU Service - Fixed Version
-Consolidated MinerU API implementation matching ai_service.py format
+MinerU Service - Dynamic Configuration Version
+Uses runtime configuration from database with environment fallback
 """
 
 import httpx
 import json
 from typing import Dict, Any, Optional
-from fastapi import HTTPException, status
 from app.core.config import settings
 from app.services.temp_file_hosting import TemporaryFileHosting
 from app.services.oss_service import os_service
+from app.services.dynamic_config_service import (
+    DynamicConfigService, 
+    get_mineru_token_sync,
+    get_mineru_api_url_sync
+)
 import logging
 import asyncio
-import time
 import os
 
 logger = logging.getLogger(__name__)
@@ -20,19 +23,63 @@ logger = logging.getLogger(__name__)
 
 class MinerUService:
     """
-    MinerU Document Extraction Service
+    MinerU Document Extraction Service with Dynamic Configuration
     
     Uses MinerU API for extracting text from documents and images.
+    Configuration is read dynamically from database (priority) or environment.
+    
     API Endpoint: https://mineru.net/api/v4/extract/task
     """
     
-    def __init__(self):
-        self.api_url = settings.mineru_api_url
-        self.token = settings.mineru_token
-        self.headers = {
-            "Authorization": f"Bearer {self.token}",
+    def __init__(self, db: Optional[Any] = None):
+        """
+        Initialize MinerU Service
+        
+        Args:
+            db: Optional database session. If provided, will read config from DB.
+                If None, uses sync fallback to environment/settings.
+        """
+        self.db = db
+        self._api_url: Optional[str] = None
+        self._token: Optional[str] = None
+        self._source: Optional[str] = None
+    
+    async def _refresh_config(self) -> Dict[str, str]:
+        """
+        Refresh configuration from database or environment
+        
+        Returns:
+            Dict with 'api_url', 'token', and 'source'
+        """
+        if self.db:
+            # Use async DB service
+            config = await DynamicConfigService.get_mineru_config(self.db)
+            self._api_url = config["api_url"]
+            self._token = config["token"]
+            self._source = config["source"]
+        else:
+            # Use sync fallback
+            self._api_url = get_mineru_api_url_sync()
+            self._token = get_mineru_token_sync()
+            self._source = "sync_fallback"
+        
+        return {
+            "api_url": self._api_url,
+            "token": self._token,
+            "source": self._source
+        }
+    
+    def _get_headers(self) -> Dict[str, str]:
+        """Get API headers with current token"""
+        token = self._token or get_mineru_token_sync()
+        return {
+            "Authorization": f"Bearer {token}",
             "Content-Type": "application/json"
         }
+    
+    def _get_api_url(self) -> str:
+        """Get API URL"""
+        return self._api_url or get_mineru_api_url_sync()
 
     async def extract_document_content(
         self, 
@@ -58,6 +105,20 @@ class MinerUService:
             Dict with extraction results including text content
         """
         try:
+            # Refresh configuration before extraction
+            config = await self._refresh_config()
+            
+            if not config["token"]:
+                logger.error("❌ MinerU token not configured")
+                return {
+                    "success": False,
+                    "status": "failed",
+                    "error": "MinerU API token not configured. Please set it in Admin > AI Model Settings.",
+                    "code": "NOT_CONFIGURED"
+                }
+            
+            logger.info(f"🔑 Using MinerU config from: {config['source']}")
+            
             # Check if it's a local file or URL
             if os.path.exists(file_path):
                 # Local file - need to get public URL
@@ -102,6 +163,9 @@ class MinerUService:
                 logger.info(f"Using provided URL: {file_data[:50]}...")
             
             # Step 1: Submit extraction task
+            api_url = self._get_api_url()
+            headers = self._get_headers()
+            
             async with httpx.AsyncClient(timeout=120.0) as client:
                 payload = {
                     "extract_type": "parse",
@@ -111,12 +175,33 @@ class MinerUService:
                     "extract_images": extract_images
                 }
                 
+                logger.info(f"📤 Submitting extraction task to MinerU API...")
+                
                 response = await client.post(
-                    self.api_url,
-                    headers=self.headers,
+                    api_url,
+                    headers=headers,
                     json=payload
                 )
 
+                if response.status_code == 401:
+                    error_detail = response.json() if response.text else {}
+                    error_msg = error_detail.get('msg', 'Unauthorized')
+                    logger.error(f"❌ MinerU API 401 Unauthorized: {error_msg}")
+                    
+                    # Check if token is from DB or environment
+                    if self._source == "database":
+                        error_text = "MinerU API token from database is expired or invalid. Please update it in Admin > AI Model Settings."
+                    else:
+                        error_text = "MinerU API token is expired or invalid. Please update MINERU_TOKEN in admin settings or .env file."
+                    
+                    return {
+                        "success": False,
+                        "status": "failed",
+                        "error": error_text,
+                        "code": 401,
+                        "detail": error_msg
+                    }
+                
                 if response.status_code != 200:
                     logger.error(f"MinerU API error: {response.status_code} - {response.text}")
                     return {
@@ -172,11 +257,12 @@ class MinerUService:
         """
         Wait for MinerU task completion and download result
         """
-        import asyncio
         import zipfile
         import io
         
-        task_url = f"{self.api_url}/{task_id}"
+        api_url = self._get_api_url()
+        headers = self._get_headers()
+        task_url = f"{api_url}/{task_id}"
         start_time = asyncio.get_event_loop().time()
         
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -193,7 +279,7 @@ class MinerUService:
                     }
                 
                 # Check task status
-                status_response = await client.get(task_url, headers=self.headers)
+                status_response = await client.get(task_url, headers=headers)
                 if status_response.status_code == 200:
                     status_result = status_response.json()
                     if status_result.get('code') == 0:
@@ -331,11 +417,14 @@ class MinerUService:
     async def health_check(self) -> Dict[str, Any]:
         """Check MinerU API health"""
         try:
+            api_url = self._get_api_url()
+            headers = self._get_headers()
+            
             async with httpx.AsyncClient(timeout=10.0) as client:
                 # Try a simple request to check if API is accessible
                 response = await client.get(
-                    self.api_url.replace('/task', '/health'),
-                    headers=self.headers
+                    api_url.replace('/task', '/health'),
+                    headers=headers
                 )
                 return {
                     "healthy": response.status_code == 200,

@@ -1,0 +1,162 @@
+# Release v2.0.1 - Unified Knowledge Base & Bug Fixes
+
+## 🎯 Commit Message
+
+```
+Release v2.0.1: Unified Knowledge Base Architecture & Critical Bug Fixes
+
+Major Changes 主要变更:
+- 重构知识库为统一扁平结构 / Refactored knowledge base to unified flat structure
+  - 所有文档统一存储在 unified/ 目录 / All documents stored in unified/ directory
+  - 移除疾病分类限制 / Removed disease category restrictions
+  - 新增 UnifiedKnowledgeLoader 服务 / Added UnifiedKnowledgeLoader service
+  - 自动文档分类和标签提取 / Auto document categorization and tag extraction
+
+Knowledge Base Workflow 知识库工作流:
+- 管理端上传 .md → 保存到 unified/ → 后台自动向量化
+- Admin uploads .md → Save to unified/ → Background auto-vectorization
+- 支持重复上传覆盖旧版本 / Support re-upload to overwrite old versions
+- 自动检测和删除旧 chunks / Auto-detect and delete old chunks on re-upload
+
+Bug Fixes Bug修复:
+- 修复 MinerU Token 动态配置不生效 / Fixed MinerU token dynamic config not working
+  - 新增 DynamicConfigService 实现运行时配置读取
+  - 新增运行时配置读取 / Added runtime config reading
+  - Admin 修改后立即生效 / Changes effective immediately without restart
+  
+- 修复向量化失败问题 / Fixed vectorization failures
+  - 修复 source_type enum 缺少 'unified_kb' / Fixed missing 'unified_kb' in enum
+  - 修复重复上传时旧 chunks 未删除 / Fixed old chunks not deleted on re-upload
+  - 修复标题匹配逻辑支持带后缀的旧版本 / Fixed title matching for suffixed versions
+  
+- 修复知识库 API 端点 / Fixed knowledge base API endpoints
+  - 更新文档列表读取 unified 目录 / Updated document list to read unified directory
+  - 修复删除端点支持 unified 结构 / Fixed delete endpoint for unified structure
+  - 修复异步文件操作 greenlet 错误 / Fixed async file operation greenlet errors
+
+Infrastructure 基础设施:
+- 新增 app/services/unified_kb_service.py / Added unified knowledge base service
+- 新增 app/services/dynamic_config_service.py / Added dynamic config service
+- 新增 app/services/document_tasks.py / Added background document processing
+- 更新文档上传后台任务真实向量化 / Updated upload to use real vectorization
+
+Database 数据库:
+- 更新 source_type enum: 添加 'unified_kb' / Added 'unified_kb' to enum
+- 支持 knowledge_base_chunks 按标题模糊删除 / Support fuzzy delete by title
+
+API Changes API变更:
+- POST /api/v1/admin/knowledge-base/upload (向量化流程更新)
+- GET /api/v1/admin/knowledge-base/documents (读取 unified 目录)
+- DELETE /api/v1/admin/knowledge-base/documents/{id} (支持 unified 结构)
+- 后台任务: _vectorize_knowledge_document (替换旧 _process_knowledge_document)
+```
+
+## 📋 详细变更 Detailed Changes
+
+### 1. Unified Knowledge Base 统一知识库
+
+**Before 之前:**
+```
+knowledge_bases/
+├── diseases/
+│   ├── digestive/
+│   ├── respiratory/
+│   └── pediatric_bronchial_asthma/
+└── active/
+```
+
+**After 之后:**
+```
+knowledge_bases/
+└── unified/
+    ├── metadata.json
+    ├── 急性胃肠炎诊疗指南.md
+    ├── 儿童支气管哮喘规范化诊治建议_2020.md
+    └── ...
+```
+
+**Benefits 优势:**
+- 简化知识库管理 / Simplified KB management
+- 支持任意疾病文档 / Support any disease documents
+- 自动分类和标签 / Auto categorization and tags
+- 更好的扩展性 / Better scalability
+
+### 2. MinerU Token Dynamic Configuration
+
+**Problem 问题:**
+Admin 修改 MinerU Token 后需要重启服务才能生效
+
+**Solution 解决方案:**
+- DynamicConfigService 从数据库实时读取配置
+- MinerUService 每次调用前刷新配置
+- 支持 URL 自动校正 (mineru.com → mineru.net)
+
+### 3. Vectorization Fixes
+
+**Fixed Issues:**
+1. PostgreSQL enum 缺少 'unified_kb' 值
+2. 重复上传时旧 chunks 未被删除 (source_type 不匹配)
+3. 标题匹配不支持带时间戳后缀的旧版本
+4. 异步文件操作导致 greenlet_spawn 错误
+
+## 🧪 测试 Test
+
+测试环境 / Test Environment:
+- Docker Compose 部署 / Docker Compose deployment
+- PostgreSQL 15 + Redis 7
+- Python 3.12 + FastAPI
+
+测试用例 / Test Cases:
+✅ 上传新文档 → 自动向量化
+✅ 重复上传 → 覆盖旧版本
+✅ MinerU Token 更新 → 立即生效
+✅ 删除文档 → 清理文件和向量
+✅ RAG 检索 → 返回正确 chunks
+
+## 📝 文档更新 Documentation Updates
+
+- 更新 README.md 知识库说明
+- 新增知识库架构文档
+- 更新 API 文档
+
+## 🔧 配置 Configuration
+
+向量化配置 / Vectorization Config:
+```json
+{
+  "provider": "qwen",
+  "model_id": "text-embedding-v3",
+  "api_url": "https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding",
+  "vector_dimension": 1024
+}
+```
+
+## 📦 部署 Deployment
+
+```bash
+# 1. 备份数据库
+./scripts/backup.sh
+
+# 2. 更新代码
+git pull origin main
+
+# 3. 重启服务
+docker-compose down
+docker-compose up -d
+
+# 4. 验证
+./scripts/health-check.sh
+```
+
+## 🐛 已知问题 Known Issues
+
+- 首次配置向量嵌入模型前上传文档会显示失败
+  (需在 Admin → AI模型设置 中配置 DashScope API Key)
+
+## 🙏 致谢 Credits
+
+感谢测试团队的知识库重构测试和反馈。
+
+---
+
+**Full Changelog**: https://github.com/yourusername/MediCare_AI/compare/v2.0.0...v2.0.1

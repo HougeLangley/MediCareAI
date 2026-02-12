@@ -784,9 +784,9 @@ class KnowledgeBaseChunk(Base):
     
     # Source Info | 来源信息
     source_document_id = Column(UUID(as_uuid=True), nullable=True)
-    source_type = Column(Enum('disease_guideline', 'medical_document', 
-                             'research_paper', name='source_type'),
-                        nullable=False)
+    source_type = Column(Enum('disease_guideline', 'medical_document',
+                             'research_paper', 'unified_kb', name='source_type'),
+                         nullable=False)
     
     # Document Metadata | 文档元数据
     disease_id = Column(UUID(as_uuid=True), ForeignKey("diseases.id"),
@@ -961,12 +961,16 @@ class AdminOperationLog(Base):
     
     operation_type = Column(Enum(
         'system_config_update',
+        'system_config_update_failed',
         'ai_model_change',
+        'configure_ai_model',
+        'configure_ai_model_failed',
         'vector_model_test',
         'knowledge_base_update',
         'upload_knowledge_document',
         'upload_knowledge_document_failed',
         'delete_knowledge_document',
+        'delete_knowledge_document_failed',
         'sync_doctor_verification',
         'doctor_verification',
         'approve_doctor',
@@ -976,6 +980,11 @@ class AdminOperationLog(Base):
         'change_password',
         'data_export',
         'user_management',
+        'manual_metrics_log',
+        'update_verification_pending',
+        'update_verification_approved',
+        'update_verification_rejected',
+        'update_verification_failed',
         name='admin_operation_type'
     ), nullable=False)
     

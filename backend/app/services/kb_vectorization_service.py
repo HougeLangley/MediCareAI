@@ -173,6 +173,36 @@ class KnowledgeBaseVectorizationService:
         """
         logger.info(f"Starting vectorization: {document_title}")
         
+        # Check if document already exists - delete old chunks if re-uploading
+        # Use LIKE to catch variations in title (e.g., with/without timestamp suffix)
+        from sqlalchemy import delete, text
+        try:
+            # Try exact match first (don't filter by source_type - old chunks may have different source_type)
+            delete_result = await self.db.execute(
+                delete(KnowledgeBaseChunk).where(
+                    KnowledgeBaseChunk.document_title == document_title
+                )
+            )
+            deleted_count = delete_result.rowcount
+            
+            # Also try partial match (for titles with timestamps or other suffixes)
+            # Extract base title (e.g., "doc.md" -> match "doc.md_*" or "doc.md*")
+            base_title = document_title.replace('.md', '')
+            if len(base_title) > 10:  # Only if we have a meaningful base title
+                partial_result = await self.db.execute(
+                    delete(KnowledgeBaseChunk).where(
+                        KnowledgeBaseChunk.document_title.like(f'{base_title}%')
+                    )
+                )
+                deleted_count += partial_result.rowcount
+            
+            if deleted_count > 0:
+                logger.info(f"Deleted {deleted_count} existing chunks for '{document_title}' (re-uploading)")
+            await self.db.commit()
+        except Exception as e:
+            logger.warning(f"Failed to delete existing chunks: {e}")
+            await self.db.rollback()
+        
         # Extract sections from markdown
         sections = self._extract_markdown_sections(document_content)
         

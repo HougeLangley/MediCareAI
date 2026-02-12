@@ -26,6 +26,7 @@ aiohttp==3.9.3
 # Cache & Storage
 redis==5.0.1
 aiofiles==23.2.1
+celery==5.3.6
 
 # Cloud Storage (Alibaba Cloud OSS)
 oss2==2.18.5

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import List
@@ -9,10 +9,13 @@ from app.schemas.document import (
     DocumentExtractionResponse
 )
 from app.services.document_service import DocumentService
+from app.services.document_tasks import process_document_extraction
 from app.core.deps import get_current_active_user
 from app.models.models import User
 import uuid
+import logging
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -59,13 +62,59 @@ async def get_document(
 async def extract_document_content(
     document_id: uuid.UUID,
     extraction_request: DocumentExtractionRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)
 ) -> MedicalDocumentResponse:
+    """
+    Start document extraction in background
+    
+    This endpoint immediately returns the document with status "processing"
+    and triggers a background task to perform the actual extraction.
+    The frontend should poll /content endpoint to check processing status.
+    """
     document_service = DocumentService(db)
-    document = await document_service.extract_document_content(
-        document_id, extraction_request, current_user.id
+    
+    # Get document to verify ownership
+    document = await document_service.get_document_by_id(document_id, current_user.id)
+    if not document:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found"
+        )
+    
+    # Check if document is already being processed
+    if document.upload_status == "processing":
+        logger.info(f"Document {document_id} is already being processed")
+        return document
+    
+    if document.upload_status == "processed":
+        logger.info(f"Document {document_id} is already processed")
+        return document
+    
+    # Update status to processing
+    from sqlalchemy import update
+    from app.models.models import MedicalDocument
+    
+    await db.execute(
+        update(MedicalDocument)
+        .where(MedicalDocument.id == document_id)
+        .values(upload_status="processing")
     )
+    await db.commit()
+    await db.refresh(document)
+    
+    # Trigger background task for extraction
+    logger.info(f"🔄 Triggering background extraction for document {document_id}")
+    background_tasks.add_task(
+        process_document_extraction,
+        document_id=document_id,
+        user_id=current_user.id,
+        extract_tables=getattr(extraction_request, 'extract_tables', True),
+        extract_images=getattr(extraction_request, 'extract_images', False),
+        ocr=getattr(extraction_request, 'ocr', True)
+    )
+    
     return document
 
 
@@ -116,16 +165,36 @@ async def get_document_content(
             detail="Access denied to this document"
         )
     
-    if document.upload_status != "processed":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Document content not yet extracted"
-        )
-    
-    # Build response with PII cleaning information
-    response = {
+    # Build response based on document status
+    base_response = {
         "document_id": str(document.id),
         "filename": document.original_filename,
+        "upload_status": document.upload_status,
+    }
+    
+    # If document is failed, return error information
+    if document.upload_status == "failed":
+        error_info = document.extraction_metadata.get("error", "Unknown error") if document.extraction_metadata else "Processing failed"
+        base_response.update({
+            "extracted_content": None,
+            "cleaned_content": None,
+            "error": error_info,
+            "message": f"Document processing failed: {error_info}"
+        })
+        return base_response
+    
+    # If document is not processed yet, return status information
+    if document.upload_status != "processed":
+        base_response.update({
+            "extracted_content": None,
+            "cleaned_content": None,
+            "message": "Document is being processed, please wait" if document.upload_status == "processing" else "Document not yet extracted"
+        })
+        return base_response
+    
+    # Build response with PII cleaning information for processed documents
+    response = {
+        **base_response,
         "extracted_content": document.extracted_content,
         "extraction_metadata": document.extraction_metadata,
         # PII cleaning information
@@ -153,6 +222,77 @@ async def get_document_content(
         ]
     
     return response
+
+
+@router.post("/{document_id}/retry")
+async def retry_document_extraction(
+    document_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+) -> dict:
+    """
+    Retry extraction for a failed document
+    """
+    from app.models.models import MedicalDocument, MedicalCase
+    
+    # Get document with case info
+    result = await db.execute(
+        select(MedicalDocument, MedicalCase)
+        .join(MedicalCase, MedicalDocument.medical_case_id == MedicalCase.id)
+        .where(MedicalDocument.id == document_id)
+    )
+    row = result.first()
+    
+    if not row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found"
+        )
+    
+    document, case = row
+    
+    # Check ownership
+    if case.patient_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
+        )
+    
+    # Only allow retry for failed documents
+    if document.upload_status not in ["failed", "uploaded"]:
+        return {
+            "document_id": str(document_id),
+            "status": document.upload_status,
+            "message": f"Cannot retry: document status is {document.upload_status}"
+        }
+    
+    # Update status to processing
+    from sqlalchemy import update
+    await db.execute(
+        update(MedicalDocument)
+        .where(MedicalDocument.id == document_id)
+        .values(upload_status="processing")
+    )
+    await db.commit()
+    
+    # Trigger background task
+    background_tasks.add_task(
+        process_document_extraction,
+        document_id=document_id,
+        user_id=current_user.id,
+        extract_tables=True,
+        extract_images=False,
+        ocr=True
+    )
+    
+    logger.info(f"🔄 Retry triggered for document {document_id}")
+    
+    return {
+        "document_id": str(document_id),
+        "status": "processing",
+        "message": "Document extraction retry started"
+    }
 
 
 @router.get("/{document_id}/pii-status")

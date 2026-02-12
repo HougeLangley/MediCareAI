@@ -19,7 +19,8 @@ logger = logging.getLogger(__name__)
 class DocumentService:
     def __init__(self, db: AsyncSession):
         self.db = db
-        self.mineru_service = MinerUService()
+        # Pass db session to MinerUService for dynamic configuration from database
+        self.mineru_service = MinerUService(db=db)
 
     async def get_document_by_id(
         self, 

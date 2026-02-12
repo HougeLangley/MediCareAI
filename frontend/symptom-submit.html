@@ -1355,7 +1355,7 @@
                     if (extractResponse.ok) {
                         // 步骤4: 轮询等待处理完成
                         let retries = 0;
-                        const maxRetries = 30; // 最多等待60秒
+                        const maxRetries = 90; // 最多等待180秒 (3分钟)，匹配后端MinerU 120秒超时
                         
                         while (retries < maxRetries) {
                             await new Promise(resolve => setTimeout(resolve, 2000)); // 等待2秒
@@ -1368,6 +1368,23 @@
 
                             if (statusResponse.ok) {
                                 const docContent = await statusResponse.json();
+                                
+                                // 检查是否有错误
+                                if (docContent.upload_status === 'failed') {
+                                    console.error(`文件处理失败: ${file.name} - ${docContent.error || '未知错误'}`);
+                                    if (statusDiv) {
+                                        statusDiv.innerHTML = `<span style="color: #dc3545;">✗</span> 文件 ${i + 1}/${uploadedFiles.length} 处理失败: ${docContent.error || '提取服务暂时不可用'}`;
+                                    }
+                                    // 即使失败也添加文档ID，让用户可以选择重试
+                                    uploadedDocuments.push({
+                                        id: document.id,
+                                        filename: file.name,
+                                        extracted_content: null,
+                                        status: 'failed',
+                                        error: docContent.error
+                                    });
+                                    break;
+                                }
                                 
                                 // 检查cleaned_content是否存在（实际提取的文本内容）
                                 if (docContent.cleaned_content && docContent.cleaned_content.text) {
@@ -1394,14 +1411,17 @@
                         }
                         
                         if (retries >= maxRetries) {
-                            console.warn(`文件处理超时: ${file.name}`);
-                            // 即使超时也添加文档ID，让后端继续处理
+                            console.warn(`文件处理轮询超时: ${file.name}，但后端仍在处理中`);
+                            // 即使轮询超时也添加文档ID，让后端继续处理
                             uploadedDocuments.push({
                                 id: document.id,
                                 filename: file.name,
                                 extracted_content: null,
                                 status: 'processing'
                             });
+                            if (statusDiv) {
+                                statusDiv.innerHTML = `<span style="color: #ffc107;">⏳</span> 文件 ${i + 1}/${uploadedFiles.length} 后台处理中，诊断时自动获取结果`;
+                            }
                         }
                     }
 
