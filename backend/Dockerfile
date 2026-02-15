@@ -33,6 +33,15 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 RUN mkdir -p uploads
 
+# Copy and set up entrypoint script
+RUN chmod +x /app/entrypoint.sh
+
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Environment variables for entrypoint (can be overridden)
+ENV POSTGRES_HOST=medicare_postgres \
+    POSTGRES_USER=medicare_user \
+    POSTGRES_PASSWORD=medicare123456 \
+    POSTGRES_DB=medicareai
+
+ENTRYPOINT ["/app/entrypoint.sh"]

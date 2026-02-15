@@ -1,12 +1,10 @@
-version: '3.8'
-
 services:
   # PostgreSQL数据库 (with pgvector extension)
   postgres:
     image: pgvector/pgvector:pg17
     container_name: medicare_postgres
     environment:
-      POSTGRES_DB: medicare_ai
+      POSTGRES_DB: medicareai
       POSTGRES_USER: medicare_user
       POSTGRES_PASSWORD: medicare123456
     volumes:
@@ -18,7 +16,7 @@ services:
       - medicare_network
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U medicare_user -d medicare_ai"]
+      test: ["CMD-SHELL", "pg_isready -U medicare_user -d medicareai"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -44,30 +42,34 @@ services:
       args:
         - USE_CN_MIRROR=${USE_CN_MIRROR:-false}
     container_name: medicare_backend
-    # 开发环境启用热重载
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    # 开发环境启用热重载 (生产环境删除此行)
+    command: ["--reload"]
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://medicare_user:medicare123456@medicare_postgres:5432/medicare_ai
+      DATABASE_URL: postgresql+asyncpg://medicare_user:medicare123456@medicare_postgres:5432/medicareai
       REDIS_URL: redis://medicare123456@medicare_redis:6379/0
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       MINERU_TOKEN: ${MINERU_TOKEN}
       AI_API_KEY: ${AI_API_KEY}
       AI_API_URL: ${AI_API_URL}
       PUBLIC_FILE_URL: ${PUBLIC_FILE_URL}
-      # Alibaba Cloud OSS Configuration
       OSS_ACCESS_KEY_ID: ${OSS_ACCESS_KEY_ID}
       OSS_ACCESS_KEY_SECRET: ${OSS_ACCESS_KEY_SECRET}
       OSS_BUCKET: ${OSS_BUCKET}
       OSS_ENDPOINT: ${OSS_ENDPOINT}
       DEBUG: "true"
+      POSTGRES_HOST: medicare_postgres
+      POSTGRES_USER: medicare_user
+      POSTGRES_PASSWORD: medicare123456
+      POSTGRES_DB: medicareai
     ports:
       - "0.0.0.0:8000:8000"
     volumes:
       - ./backend:/app
       - ./.env:/app/.env
       - uploads_data:/app/uploads
+      - kb_data:/app/data/knowledge_bases
     depends_on:
       postgres:
         condition: service_healthy
@@ -122,6 +124,7 @@ volumes:
   postgres_data:
   redis_data:
   uploads_data:
+  kb_data:
 
 networks:
   medicare_network:

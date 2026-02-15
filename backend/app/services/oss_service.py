@@ -1,12 +1,14 @@
 """
 Alibaba Cloud OSS Service for MinerU Integration
 Handles file uploads and generates presigned URLs for document extraction
+Supports dynamic configuration from database
 """
 
 import oss2
 import uuid
 import logging
-from typing import Optional
+import os
+from typing import Optional, Dict
 from pathlib import Path
 from datetime import datetime, timedelta
 from app.core.config import settings
@@ -22,17 +24,21 @@ class OSService:
     - File upload to OSS bucket
     - Generate presigned URLs for temporary access
     - Automatic cleanup support
+    - Dynamic configuration from database
     """
     
     def __init__(self):
         """Initialize OSS client with configuration from settings"""
-        self.access_key_id = getattr(settings, 'oss_access_key_id', None)
-        self.access_key_secret = getattr(settings, 'oss_access_key_secret', None)
-        self.bucket_name = getattr(settings, 'oss_bucket', None)
-        self.endpoint = getattr(settings, 'oss_endpoint', None)
+        self.access_key_id = getattr(settings, 'oss_access_key_id', None) or os.environ.get("OSS_ACCESS_KEY_ID")
+        self.access_key_secret = getattr(settings, 'oss_access_key_secret', None) or os.environ.get("OSS_ACCESS_KEY_SECRET")
+        self.bucket_name = getattr(settings, 'oss_bucket', None) or os.environ.get("OSS_BUCKET") or os.environ.get("OSS_BUCKET_NAME")
+        self.endpoint = getattr(settings, 'oss_endpoint', None) or os.environ.get("OSS_ENDPOINT")
         
-        # Initialize OSS client if all credentials are available
         self.bucket = None
+        self._init_client()
+    
+    def _init_client(self):
+        """Initialize OSS client with current credentials"""
         if all([self.access_key_id, self.access_key_secret, self.bucket_name, self.endpoint]):
             try:
                 auth = oss2.Auth(self.access_key_id, self.access_key_secret)
@@ -43,6 +49,51 @@ class OSService:
                 self.bucket = None
         else:
             logger.warning("⚠️ OSS credentials not fully configured")
+    
+    def update_config(self, config: Dict[str, str]):
+        """
+        Update OSS configuration dynamically
+        
+        Args:
+            config: Dict with 'access_key_id', 'access_key_secret', 'bucket', 'endpoint'
+        """
+        self.access_key_id = config.get("access_key_id", "")
+        self.access_key_secret = config.get("access_key_secret", "")
+        self.bucket_name = config.get("bucket", "")
+        self.endpoint = config.get("endpoint", "")
+        
+        # Re-initialize client with new config
+        self._init_client()
+        
+        # Also update environment variables for persistence
+        if self.access_key_id:
+            os.environ["OSS_ACCESS_KEY_ID"] = self.access_key_id
+        if self.access_key_secret:
+            os.environ["OSS_ACCESS_KEY_SECRET"] = self.access_key_secret
+        if self.bucket_name:
+            os.environ["OSS_BUCKET"] = self.bucket_name
+            os.environ["OSS_BUCKET_NAME"] = self.bucket_name
+        if self.endpoint:
+            os.environ["OSS_ENDPOINT"] = self.endpoint
+        
+        logger.info(f"✅ OSS configuration updated: bucket={self.bucket_name}")
+    
+    async def reload_config_from_db(self, db):
+        """
+        Reload OSS configuration from database
+        
+        Args:
+            db: Database session
+        """
+        try:
+            from app.services.dynamic_config_service import DynamicConfigService
+            config = await DynamicConfigService.get_oss_config(db)
+            if config.get("source") != "none":
+                self.update_config(config)
+                return True
+        except Exception as e:
+            logger.error(f"Failed to reload OSS config from database: {e}")
+        return False
     
     def is_configured(self) -> bool:
         """Check if OSS is properly configured"""

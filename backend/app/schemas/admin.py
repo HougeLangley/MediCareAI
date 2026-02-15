@@ -129,6 +129,7 @@ class AIModelsResponse(BaseModel):
     diagnosis_llm: AIModelStatus
     mineru: AIModelStatus
     embedding: AIModelStatus
+    oss: Optional[AIModelStatus] = None
     timestamp: datetime
 
 
@@ -328,6 +329,17 @@ class AIModelConfigRequest(BaseModel):
     api_url: str
     api_key: str
     model_id: Optional[str] = None
+    enabled: bool = True
+    provider: Optional[str] = None  # AI provider: zhipu, kimi, deepseek, ollama, vllm, lmstudio, openai, custom
+    access_key_id: Optional[str] = None  # For OSS configuration
+
+
+class OSSConfigRequest(BaseModel):
+    """OSS configuration request | OSS配置请求"""
+    bucket: str
+    endpoint: str
+    access_key_id: str
+    access_key_secret: str
     enabled: bool = True
 
 

@@ -191,6 +191,78 @@ class DynamicConfigService:
             "model_id": os.environ.get("EMBEDDING_MODEL_ID") or settings.embedding_model_id,
             "source": "environment"
         }
+    
+    @staticmethod
+    async def get_oss_config(db: AsyncSession) -> Dict[str, str]:
+        """
+        Get Alibaba Cloud OSS configuration from database or environment
+        
+        Priority:
+        1. Database (ai_model_config table with model_type='oss') - if exists and enabled
+        2. Environment variables
+        3. Settings object (startup values)
+        
+        Returns:
+            Dict with 'access_key_id', 'access_key_secret', 'bucket', 'endpoint'
+        """
+        try:
+            result = await db.execute(
+                select(AIModelConfiguration).where(
+                    AIModelConfiguration.model_type == "oss"
+                )
+            )
+            config = result.scalar_one_or_none()
+            
+            if config and config.enabled and config.api_key_encrypted:
+                decrypted_key = decrypt_key(config.api_key_encrypted)
+                if decrypted_key:
+                    # OSS config stored in config_metadata
+                    metadata = config.config_metadata or {}
+                    return {
+                        "access_key_id": metadata.get("access_key_id", ""),
+                        "access_key_secret": decrypted_key,
+                        "bucket": config.model_id or metadata.get("bucket", ""),
+                        "endpoint": config.api_url or metadata.get("endpoint", ""),
+                        "source": "database"
+                    }
+        except Exception as e:
+            logger.error(f"Error reading OSS config from database: {e}")
+        
+        # Fallback to environment variables
+        access_key_id = os.environ.get("OSS_ACCESS_KEY_ID", "")
+        access_key_secret = os.environ.get("OSS_ACCESS_KEY_SECRET", "")
+        bucket = os.environ.get("OSS_BUCKET", os.environ.get("OSS_BUCKET_NAME", ""))
+        endpoint = os.environ.get("OSS_ENDPOINT", "")
+        
+        if access_key_id and access_key_secret and bucket and endpoint:
+            logger.info("✅ Using OSS config from environment variables")
+            return {
+                "access_key_id": access_key_id,
+                "access_key_secret": access_key_secret,
+                "bucket": bucket,
+                "endpoint": endpoint,
+                "source": "environment"
+            }
+        
+        # Fallback to settings
+        if settings.oss_access_key_id and settings.oss_access_key_secret:
+            logger.info("✅ Using OSS config from settings (startup)")
+            return {
+                "access_key_id": settings.oss_access_key_id,
+                "access_key_secret": settings.oss_access_key_secret,
+                "bucket": settings.oss_bucket or "",
+                "endpoint": settings.oss_endpoint or "",
+                "source": "settings"
+            }
+        
+        logger.warning("⚠️ No OSS configuration found!")
+        return {
+            "access_key_id": "",
+            "access_key_secret": "",
+            "bucket": "",
+            "endpoint": "",
+            "source": "none"
+        }
 
 
 # Simple non-async version for services that can't easily use async

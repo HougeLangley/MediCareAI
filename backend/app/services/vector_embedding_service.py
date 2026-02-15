@@ -20,6 +20,7 @@ Features:
 import httpx
 import logging
 from typing import Dict, List, Optional, Any
+from types import SimpleNamespace
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 from app.models.models import VectorEmbeddingConfig
@@ -252,21 +253,41 @@ class VectorEmbeddingService:
         """
         Generate embedding using specified or default config / 生成嵌入向量
         """
-        # Get config
+        # Get config from vector_embedding_configs table
+        config = None
         if config_id:
             stmt = select(VectorEmbeddingConfig).where(
                 VectorEmbeddingConfig.id == config_id,
                 VectorEmbeddingConfig.is_active == True
             )
+            result = await self.db.execute(stmt)
+            config = result.scalar_one_or_none()
         else:
             # Use default config
             stmt = select(VectorEmbeddingConfig).where(
                 VectorEmbeddingConfig.is_default == True,
                 VectorEmbeddingConfig.is_active == True
             )
+            result = await self.db.execute(stmt)
+            config = result.scalar_one_or_none()
         
-        result = await self.db.execute(stmt)
-        config = result.scalar_one_or_none()
+        # If not found in vector_embedding_configs, try ai_model_configurations (embedding type)
+        if not config:
+            try:
+                from app.services.dynamic_config_service import DynamicConfigService
+                from types import SimpleNamespace
+                embedding_config = await DynamicConfigService.get_embedding_config(self.db)
+                if embedding_config.get("source") != "environment":
+                    # Create a temporary config object
+                    config = SimpleNamespace(
+                        api_url=embedding_config["api_url"],
+                        api_key=embedding_config["api_key"],
+                        model_id=embedding_config["model_id"],
+                        provider='dashscope' if 'dashscope' in embedding_config["api_url"].lower() else 'openai'
+                    )
+                    logger.info(f"Using embedding config from ai_model_configurations: {config.model_id}")
+            except Exception as e:
+                logger.error(f"Error reading embedding config from ai_model_configurations: {e}")
         
         if not config:
             raise ValueError("No active embedding configuration found")
@@ -275,7 +296,8 @@ class VectorEmbeddingService:
             text=text,
             api_url=config.api_url,
             api_key=config.api_key,
-            model_id=config.model_id
+            model_id=config.model_id,
+            provider=getattr(config, 'provider', None)
         )
     
     async def generate_embeddings_batch(
@@ -289,7 +311,8 @@ class VectorEmbeddingService:
         if not texts:
             return []
         
-        # Get config
+        # Try to get config from vector_embedding_configs table first
+        config = None
         if config_id:
             stmt = select(VectorEmbeddingConfig).where(
                 VectorEmbeddingConfig.id == config_id,
@@ -303,6 +326,23 @@ class VectorEmbeddingService:
         
         result = await self.db.execute(stmt)
         config = result.scalar_one_or_none()
+        
+        # If not found in vector_embedding_configs, try ai_model_configurations (embedding type)
+        if not config:
+            try:
+                from app.services.dynamic_config_service import DynamicConfigService
+                embedding_config = await DynamicConfigService.get_embedding_config(self.db)
+                if embedding_config.get("source") != "environment":
+                    # Create a temporary config object
+                    config = SimpleNamespace(
+                        api_url=embedding_config["api_url"],
+                        api_key=embedding_config["api_key"],
+                        model_id=embedding_config["model_id"],
+                        provider='dashscope' if 'dashscope' in embedding_config["api_url"].lower() else 'openai'
+                    )
+                    logger.info(f"Using embedding config from ai_model_configurations: {config.model_id}")
+            except Exception as e:
+                logger.error(f"Error reading embedding config from ai_model_configurations: {e}")
         
         if not config:
             raise ValueError("No active embedding configuration found")

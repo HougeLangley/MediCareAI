@@ -126,6 +126,13 @@ class MinerUService:
                 public_url = None
                 
                 # Priority 1: Try Alibaba Cloud OSS (recommended for production)
+                # First, try to reload OSS config from database if available
+                if self.db:
+                    logger.info("🔄 Reloading OSS configuration from database...")
+                    oss_config_reloaded = await os_service.reload_config_from_db(self.db)
+                    if oss_config_reloaded:
+                        logger.info("✅ OSS configuration reloaded from database")
+                
                 if os_service.is_configured():
                     logger.info("🔄 Trying Alibaba Cloud OSS...")
                     public_url = await os_service.upload_and_get_url(file_path, expiration=3600)
@@ -167,15 +174,19 @@ class MinerUService:
             headers = self._get_headers()
             
             async with httpx.AsyncClient(timeout=120.0) as client:
+                # According to MinerU API documentation:
+                # https://github.com/opendatalab/MinerU/issues/2952
+                # Correct parameters are: is_ocr, enable_table, enable_formula
+                # Not: ocr, extract_tables, extract_images
+                
                 payload = {
-                    "extract_type": "parse",
                     "url": file_data,
-                    "ocr": ocr,
-                    "extract_tables": extract_tables,
-                    "extract_images": extract_images
+                    "is_ocr": ocr,
+                    "enable_table": extract_tables,
+                    "enable_formula": False
                 }
                 
-                logger.info(f"📤 Submitting extraction task to MinerU API...")
+                logger.info(f"📤 Submitting extraction task to MinerU API with is_ocr={ocr}, enable_table={extract_tables}...")
                 
                 response = await client.post(
                     api_url,
@@ -297,16 +308,27 @@ class MinerUService:
                                     # Extract content from ZIP
                                     try:
                                         with zipfile.ZipFile(io.BytesIO(zip_response.content)) as zf:
+                                            # List all files in ZIP for debugging
+                                            files_in_zip = zf.namelist()
+                                            logger.info(f"📦 ZIP contains {len(files_in_zip)} files: {files_in_zip[:10]}")
+                                            
                                             # Find full.md file
                                             markdown_content = ""
                                             text_content = ""
+                                            json_content = None
                                             
-                                            for filename in zf.namelist():
+                                            for filename in files_in_zip:
                                                 if filename.endswith('full.md'):
                                                     markdown_content = zf.read(filename).decode('utf-8')
                                                     text_content = markdown_content  # Use markdown as text
-                                                    logger.info(f"✅ Extracted content from {filename}")
-                                                    break
+                                                    logger.info(f"✅ Extracted markdown from {filename}, length: {len(markdown_content)}")
+                                                elif filename.endswith('content_list.json'):
+                                                    # Also extract JSON content list which may have better table data
+                                                    try:
+                                                        json_content = zf.read(filename).decode('utf-8')
+                                                        logger.info(f"✅ Extracted JSON from {filename}, length: {len(json_content)}")
+                                                    except Exception as json_err:
+                                                        logger.warning(f"⚠️ Failed to extract JSON: {json_err}")
                                             
                                             if markdown_content:
                                                 return {
@@ -315,6 +337,7 @@ class MinerUService:
                                                     "task_id": task_id,
                                                     "text_content": text_content,
                                                     "markdown_content": markdown_content,
+                                                    "json_content": json_content,
                                                     "extraction_metadata": {
                                                         "ocr_used": ocr,
                                                         "extract_tables": extract_tables,

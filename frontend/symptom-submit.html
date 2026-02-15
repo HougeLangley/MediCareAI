@@ -602,11 +602,12 @@
 
         /* Knowledge Base Attribution Panel Styles */
         .kb-attribution-panel {
-            margin-top: 20px;
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border-radius: 12px;
-            border: 1px solid #dee2e6;
+            margin-top: 24px;
+            background: white;
+            border-radius: 16px;
+            border: 1px solid #e8e8e8;
             overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
         }
 
         .kb-attribution-header {
@@ -665,33 +666,30 @@
             line-height: 1.5;
         }
 
-        .kb-source-card {
-            background: white;
-            border-radius: 10px;
-            padding: 18px;
-            margin-bottom: 15px;
-            border: 1px solid #e0e0e0;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            transition: transform 0.2s, box-shadow 0.2s;
+        /* 知识库来源 - 扁平化设计 */
+        .kb-source-section {
+            margin-bottom: 24px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e8e8e8;
         }
 
-        .kb-source-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        .kb-source-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
         }
 
         .kb-source-header {
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 12px;
+            align-items: center;
+            margin-bottom: 8px;
             flex-wrap: wrap;
             gap: 10px;
         }
 
         .kb-source-title {
             font-weight: 600;
-            font-size: 16px;
+            font-size: 15px;
             color: #333;
             display: flex;
             align-items: center;
@@ -701,91 +699,84 @@
         .kb-source-badge {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 12px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
             font-weight: 500;
         }
 
-        .kb-source-relevance {
+        .kb-source-meta {
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 13px;
-            color: #666;
+            gap: 12px;
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 12px;
         }
 
         .kb-relevance-bar {
-            width: 80px;
-            height: 6px;
+            width: 60px;
+            height: 4px;
             background: #e0e0e0;
-            border-radius: 3px;
+            border-radius: 2px;
             overflow: hidden;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 6px;
         }
 
         .kb-relevance-fill {
             height: 100%;
             background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            border-radius: 3px;
+            border-radius: 2px;
             transition: width 0.3s;
         }
 
         .kb-source-reason {
-            font-size: 13px;
+            font-size: 12px;
             color: #666;
             margin-bottom: 12px;
-            padding: 8px 12px;
-            background: #f8f9fa;
-            border-radius: 6px;
-            border-left: 3px solid #667eea;
+            padding: 6px 0;
+            border-bottom: 1px dashed #e0e0e0;
         }
 
-        .kb-chunks-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: #555;
-            margin-bottom: 10px;
+        /* 引用内容列表 - 极简风格 */
+        .kb-chunks-list {
             display: flex;
-            align-items: center;
-            gap: 6px;
+            flex-direction: column;
+            gap: 8px;
         }
 
         .kb-chunk-item {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 10px;
-            border-left: 3px solid #28a745;
+            padding: 10px 12px;
+            border-left: 2px solid #667eea;
+            background: #fafbfc;
             font-size: 13px;
+            line-height: 1.5;
+            color: #555;
         }
 
         .kb-chunk-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 8px;
-            flex-wrap: wrap;
-            gap: 5px;
+            margin-bottom: 6px;
+            font-size: 12px;
         }
 
         .kb-chunk-section {
-            font-weight: 600;
-            color: #333;
-            font-size: 13px;
+            font-weight: 500;
+            color: #667eea;
         }
 
         .kb-chunk-similarity {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 12px;
             color: #28a745;
+            font-size: 11px;
         }
 
         .kb-chunk-text {
-            color: #555;
-            line-height: 1.5;
-            font-size: 13px;
+            color: #666;
+            line-height: 1.6;
         }
 
         .kb-no-sources {
@@ -1087,16 +1078,34 @@
                 return;
             }
 
-            // 重置并显示结果区域
+            // 重置并显示结果区域 - 优雅的设计
             aiResultDiv.classList.add('show');
+            
+            // 创建优雅的三段式布局
             diagnosisContent.innerHTML = `
-                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px;">
-                    <h4 style="color: #667eea; margin-bottom: 15px;">🤖 AI 正在分析...</h4>
-                    <div id="streamingContent" style="line-height: 1.8; color: #333; min-height: 100px;">
-                        <span class="spinner"></span> 正在初始化诊断...
+                <!-- 第一段：已上传的检查资料 -->
+                <div id="documentSection" style="margin-bottom: 24px;"></div>
+                
+                <!-- 第二段：AI分析状态 -->
+                <div id="aiAnalysisSection" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 24px; border-radius: 16px; box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3); color: white;">
+                    <div style="display: flex; align-items: center; margin-bottom: 16px;">
+                        <div style="width: 40px; height: 40px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 16px;">
+                            <span style="font-size: 20px;">🤖</span>
+                        </div>
+                        <div>
+                            <h4 style="margin: 0; font-size: 18px; font-weight: 600;">AI 正在智能分析</h4>
+                            <p id="streamingStatus" style="margin: 4px 0 0 0; opacity: 0.9; font-size: 14px;">正在初始化诊断...</p>
+                        </div>
+                        <div style="margin-left: auto;">
+                            <span class="spinner" style="width: 24px; height: 24px; border: 3px solid rgba(255,255,255,0.3); border-top-color: white;"></span>
+                        </div>
                     </div>
-                    <div id="streamingStatus" style="margin-top: 10px; color: #666; font-size: 14px;">
-                        等待AI响应...
+                    
+                    <div id="streamingContent" style="background: rgba(255,255,255,0.95); padding: 20px; border-radius: 12px; color: #333; line-height: 1.8; min-height: 120px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
+                        <div style="color: #999; font-style: italic; text-align: center; padding: 20px;">
+                            <div style="font-size: 48px; margin-bottom: 12px;">🏥</div>
+                            <div>正在分析您的症状和检查资料...</div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -1143,10 +1152,13 @@
                     uploadedDocuments = await uploadAndExtractFiles(currentCaseId);
                     documentIds = uploadedDocuments.map(doc => doc.id).filter(id => id);
                     
-                    // 显示提取的文档内容
+                    // 显示提取的文档内容（放在单独的documentSection中，不混入诊断内容）
                     if (uploadedDocuments.length > 0) {
                         const docHtml = displayExtractedDocuments(uploadedDocuments);
-                        diagnosisContent.innerHTML = docHtml + diagnosisContent.innerHTML;
+                        const documentSection = document.getElementById('documentSection');
+                        if (documentSection) {
+                            documentSection.innerHTML = docHtml;
+                        }
                     }
                 }
                 
@@ -1250,19 +1262,26 @@
                     }
                 }
 
-                showResult('success', 'AI诊断完成！');
+                showResult('success', 'AI诊断完成！已保存到您的诊疗记录中。');
 
                 // 最终显示格式化结果
+                // 从 window.diagnosisInfo 获取模型和token信息
+                const diagnosisInfo = window.diagnosisInfo || {};
+                
                 displayAiResult({
                     case_id: caseId,
                     diagnosis: fullDiagnosis,
                     possible_causes: '详见AI诊断报告',
                     recommendations: '请参考诊断建议',
                     severity: severity,
+                    model_used: diagnosisInfo.model_used || 'AI Model',
+                    tokens_used: diagnosisInfo.tokens_used || 0,
                     full_result: {
                         success: true,
                         case_id: caseId,
-                        diagnosis: fullDiagnosis
+                        diagnosis: fullDiagnosis,
+                        model_used: diagnosisInfo.model_used,
+                        tokens_used: diagnosisInfo.tokens_used
                     }
                 });
 
@@ -1281,11 +1300,30 @@
         function updateStreamingContent(text) {
             const streamingContent = document.getElementById('streamingContent');
             if (streamingContent) {
-                // 使用 marked.js 将 Markdown 转换为 HTML
-                const htmlContent = marked.parse(text);
+                if (!text || text.trim().length === 0) {
+                    streamingContent.innerHTML = `
+                        <div style="display: flex; align-items: center; justify-content: center; padding: 40px; color: #a0aec0;">
+                            <span class="spinner" style="width: 24px; height: 24px; border-width: 3px; margin-right: 12px;"></span>
+                            <span>正在分析中...</span>
+                        </div>`;
+                    return;
+                }
+
+                let htmlContent;
+                if (typeof marked !== 'undefined' && marked.parse) {
+                    htmlContent = marked.parse(text);
+                } else {
+                    // Fallback: simple markdown-like formatting
+                    htmlContent = text
+                        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                        .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+                        .replace(/\*(.*?)\*/gim, '<em>$1</em>')
+                        .replace(/`([^`]+)`/gim, '<code>$1</code>')
+                        .replace(/\n/gim, '<br>');
+                }
                 streamingContent.innerHTML = htmlContent;
-                
-                // 自动滚动到底部
                 streamingContent.scrollTop = streamingContent.scrollHeight;
             }
         }
@@ -1387,13 +1425,17 @@
                                 }
                                 
                                 // 检查cleaned_content是否存在（实际提取的文本内容）
-                                if (docContent.cleaned_content && docContent.cleaned_content.text) {
+                                // 支持两种格式: 旧格式是对象{text: "..."}，新格式是直接字符串
+                                const cleanedText = typeof docContent.cleaned_content === 'string' 
+                                    ? docContent.cleaned_content 
+                                    : (docContent.cleaned_content && docContent.cleaned_content.text);
+                                if (cleanedText) {
                                     // 处理完成
                                     uploadedDocuments.push({
                                         id: document.id,
                                         filename: file.name,
                                         extracted_content: docContent.extracted_content,
-                                        cleaned_content: docContent.cleaned_content,
+                                        cleaned_content: cleanedText,
                                         pii_cleaning: docContent.pii_cleaning
                                     });
                                     
@@ -1522,28 +1564,55 @@
         // 显示提取的文档内容
         function displayExtractedDocuments(documents) {
             if (!documents || documents.length === 0) return '';
-            
+
             let html = `
-                <div style="margin: 20px 0; padding: 15px; background: #f0f7ff; border-radius: 8px; border-left: 4px solid #667eea;">
-                    <h4 style="color: #667eea; margin-bottom: 10px;">📄 上传的文档资料</h4>
-                    <div style="font-size: 14px; color: #666;">
+                <div style="background: white; border-radius: 16px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e8e8e8;">
+                    <div style="display: flex; align-items: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid #f0f0f0;">
+                        <div style="width: 44px; height: 44px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-right: 14px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">
+                            <span style="font-size: 22px;">📋</span>
+                        </div>
+                        <div>
+                            <h4 style="margin: 0; color: #2c3e50; font-size: 18px; font-weight: 600;">已上传的检查资料</h4>
+                            <p style="margin: 4px 0 0 0; color: #7f8c8d; font-size: 13px;">AI将结合这些资料进行诊断分析</p>
+                        </div>
+                        <span style="margin-left: auto; background: #e8f5e9; color: #27ae60; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;">
+                            ✓ ${documents.length} 个文件
+                        </span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 20px;">
             `;
-            
+
             documents.forEach((doc, index) => {
+                const hasContent = doc.extracted_content && doc.extracted_content.trim().length > 0;
                 html += `
-                    <div style="margin-bottom: 10px; padding: 10px; background: white; border-radius: 6px;">
-                        <strong>文件 ${index + 1}:</strong> ${doc.filename}
-                        ${doc.pii_cleaning ? `<span style="color: #28a745; font-size: 12px;"> (PII已清理)</span>` : ''}
-                        ${doc.extracted_content ? `
-                            <div style="margin-top: 8px; padding: 8px; background: #f8f9fa; border-radius: 4px; font-size: 13px; max-height: 150px; overflow-y: auto;">
-                                <strong>提取内容预览:</strong><br>
-                                ${doc.extracted_content.substring(0, 300)}${doc.extracted_content.length > 300 ? '...' : ''}
+                     <div style="background: white; border-radius: 12px; padding: 20px; border: 1px solid #e8ecf1; box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: all 0.3s ease;"
+                         onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.1)'; this.style.transform='translateY(-2px)'"
+                         onmouseout="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.04)'; this.style.transform='none'">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: ${hasContent ? '16px' : '0'};">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700;">
+                                    ${index + 1}
+                                </div>
+                                <span style="font-weight: 600; color: #2c3e50; font-size: 15px;">${doc.filename}</span>
                             </div>
-                        ` : '<div style="color: #999; font-size: 12px;">内容提取中...</div>'}
+                            ${doc.pii_cleaning ? `<span style="color: #27ae60; font-size: 12px; background: #e8f5e9; padding: 4px 10px; border-radius: 12px; font-weight: 500;">✓ 隐私已保护</span>` : ''}
+                        </div>
+                        
+                        ${hasContent ? `
+                            <div style="border-top: 1px solid #f0f2f5; padding-top: 16px;">
+                                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                                    <span style="width: 4px; height: 16px; background: linear-gradient(180deg, #667eea 0%, #764ba2 100%); border-radius: 2px; margin-right: 8px;"></span>
+                                    <span style="color: #667eea; font-weight: 600; font-size: 13px;">提取的关键信息</span>
+                                </div>
+                                <div style="font-size: 14px; color: #4a5568; line-height: 1.8; background: #fafbfc; padding: 16px; border-radius: 10px; border-left: 3px solid #667eea;">
+                                    ${doc.extracted_content.substring(0, 400)}${doc.extracted_content.length > 400 ? '<span style="color: #a0aec0;">...</span>' : ''}
+                                </div>
+                            </div>
+                        ` : '<div style="display: flex; align-items: center; color: #a0aec0; font-size: 14px; padding: 12px 0; border-top: 1px solid #f0f2f5;"><span class="spinner" style="width: 16px; height: 16px; border-width: 2px; margin-right: 10px;"></span>正在提取文档内容...</div>'}
                     </div>
                 `;
             });
-            
+
             html += '</div></div>';
             return html;
         }
@@ -1572,42 +1641,36 @@
             }
 
             let sourcesHtml = sources.map((source, index) => {
-                const relevancePercent = Math.min(100, Math.round((source.relevance_score || 0) * 33.33)); // Scale to percentage
-                const chunksHtml = source.chunks && source.chunks.length > 0 
-                    ? source.chunks.map((chunk, cidx) => `
+                const relevancePercent = Math.min(100, Math.round((source.relevance_score || 0) * 33.33));
+                const chunksHtml = source.chunks && source.chunks.length > 0
+                    ? `<div class="kb-chunks-list">${source.chunks.map((chunk, cidx) => `
                         <div class="kb-chunk-item">
                             <div class="kb-chunk-header">
-                                <span class="kb-chunk-section">📄 ${chunk.section_title || '相关内容'}</span>
-                                <span class="kb-chunk-similarity">
-                                    <span>相似度:</span>
-                                    <strong>${((chunk.similarity_score || 0) * 100).toFixed(1)}%</strong>
-                                </span>
+                                <span class="kb-chunk-section">${chunk.section_title || '相关内容'}</span>
+                                <span class="kb-chunk-similarity">${((chunk.similarity_score || 0) * 100).toFixed(1)}%</span>
                             </div>
                             <div class="kb-chunk-text">${chunk.text_preview || ''}</div>
                         </div>
-                    `).join('')
-                    : '<div style="color: #999; font-size: 12px; padding: 10px;">无详细内容片段</div>';
+                    `).join('')}</div>`
+                    : '<div style="color: #999; font-size: 12px; padding: 10px 0;">无详细内容片段</div>';
 
                 return `
-                    <div class="kb-source-card">
+                    <div class="kb-source-section">
                         <div class="kb-source-header">
                             <div class="kb-source-title">
-                                <span>${source.category_name || source.category}</span>
+                                <span>${source.category_name || (source.category === 'unified' ? '医学知识库' : source.category)}</span>
                                 <span class="kb-source-badge">${source.chunks_count || 0} 条引用</span>
                             </div>
-                            <div class="kb-source-relevance">
-                                <span>相关度:</span>
-                                <div class="kb-relevance-bar">
-                                    <div class="kb-relevance-fill" style="width: ${relevancePercent}%"></div>
-                                </div>
-                                <span>${source.relevance_score?.toFixed(2) || '0.00'}</span>
-                            </div>
                         </div>
-                        <div class="kb-source-reason">
-                            <strong>选择原因:</strong> ${source.selection_reason || '基于症状匹配'}
-                        </div>
-                        <div class="kb-chunks-title">
-                            <span>📋 引用的知识内容</span>
+                        <div class="kb-source-meta">
+                            <span>
+                                <span class="kb-relevance-bar">
+                                    <span class="kb-relevance-fill" style="width: ${relevancePercent}%"></span>
+                                </span>
+                                相关度 ${source.relevance_score?.toFixed(2) || '0.00'}
+                            </span>
+                            <span>·</span>
+                            <span>${source.selection_reason || '基于症状匹配'}</span>
                         </div>
                         ${chunksHtml}
                     </div>
@@ -1661,12 +1724,25 @@
                 const diagnosisText = result.diagnosis || '暂无诊断结果';
                 
                 // 使用 marked.js 将 Markdown 转换为 HTML
-                const formattedDiagnosis = marked.parse(diagnosisText);
+                let formattedDiagnosis;
+                if (typeof marked !== 'undefined' && marked.parse) {
+                    formattedDiagnosis = marked.parse(diagnosisText);
+                } else {
+                    // Fallback: simple markdown-like formatting
+                    formattedDiagnosis = diagnosisText
+                        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                        .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+                        .replace(/\*(.*?)\*/gim, '<em>$1</em>')
+                        .replace(/`([^`]+)`/gim, '<code>$1</code>')
+                        .replace(/\n/gim, '<br>');
+                }
                 
                 // 获取诊断信息（从 window.diagnosisInfo 或 result）
                 const info = window.diagnosisInfo || {};
                 const caseId = info.case_id || result.case_id || 'N/A';
-                const modelUsed = info.model_used || 'unsloth/GLM-4.7-Flash-GGUF:BF16';
+                const modelUsed = info.model_used || result.model_used || result.model || 'AI Model';
                 const tokensUsed = info.tokens_used || 0;
                 const createdAt = info.created_at ? new Date(info.created_at).toLocaleString('zh-CN') : new Date().toLocaleString('zh-CN');
                 
@@ -1676,20 +1752,48 @@
                 const kbPanelHtml = renderKnowledgeBaseSources(kbSources, kbReasoning);
 
                 diagnosisContent.innerHTML = `
-                    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 15px;">
-                        <h4 style="color: #667eea; margin-bottom: 15px;">🤖 AI 诊断报告</h4>
-                        <div class="markdown-body" style="line-height: 1.8; color: #333;">
+                    <div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e8e8e8; margin-bottom: 24px;">
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 24px; color: white;">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div style="display: flex; align-items: center;">
+                                    <div style="width: 48px; height: 48px; background: rgba(255,255,255,0.2); border-radius: 14px; display: flex; align-items: center; justify-content: center; margin-right: 16px;">
+                                        <span style="font-size: 24px;">🤖</span>
+                                    </div>
+                                    <div>
+                                        <h4 style="margin: 0; font-size: 20px; font-weight: 600;">AI 诊断报告</h4>
+                                        <p style="margin: 4px 0 0 0; opacity: 0.9; font-size: 14px;">基于症状描述和检查资料的智能分析</p>
+                                    </div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px; font-size: 13px;">
+                                        ${createdAt}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="markdown-body" style="padding: 28px; line-height: 1.8; color: #2d3748; font-size: 15px;">
                             ${formattedDiagnosis}
                         </div>
                     </div>
-                    ${kbPanelHtml}
-                    <div style="background: #e7f3ff; padding: 15px; border-radius: 8px; font-size: 14px; margin-top: 20px;">
-                        <strong>📊 诊断信息：</strong><br>
-                        病例ID: ${caseId}<br>
-                        模型: ${modelUsed}<br>
-                        Token用量: ${tokensUsed}<br>
-                        诊断时间: ${createdAt}
+
+                    <div style="background: white; padding: 20px; border-radius: 16px; margin-bottom: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); border: 1px solid #e8e8e8;">
+                        <div style="display: flex; flex-wrap: wrap; gap: 16px 32px; font-size: 13px; color: #666; align-items: center;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="color: #999; font-size: 12px;">病例ID</span>
+                                <code style="background: #f5f5f5; padding: 4px 10px; border-radius: 6px; font-family: 'Monaco', 'Menlo', monospace; color: #555; border: 1px solid #e0e0e0; font-size: 11px;">${caseId}</code>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="color: #999; font-size: 12px;">AI模型</span>
+                                <span style="color: #333; font-weight: 500; background: linear-gradient(135deg, #667eea20, #764ba220); padding: 4px 12px; border-radius: 6px; border: 1px solid #667eea30;">${modelUsed}</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px; margin-left: auto;">
+                                <span style="color: #999; font-size: 12px;">Token用量</span>
+                                <span style="background: linear-gradient(135deg, #e6fffa, #b2f5ea); color: #319795; padding: 4px 12px; border-radius: 12px; font-weight: 600; font-size: 12px; border: 1px solid #81e6d9;">${tokensUsed}</span>
+                            </div>
+                        </div>
                     </div>
+
+                    ${kbPanelHtml}
                 `;
             } else if (data.diagnosis) {
                 diagnosisContent.innerHTML = `

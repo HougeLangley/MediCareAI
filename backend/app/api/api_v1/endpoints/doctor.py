@@ -80,10 +80,11 @@ class CaseDetailResponse(BaseModel):
 
 class DashboardStats(BaseModel):
     """Dashboard statistics / 工作台统计"""
-    pending_mentions: int
-    public_cases_by_specialty: Dict[str, int]
-    today_new_cases: int
-    exported_research_data: int
+    mentioned_cases: int
+    public_cases: int
+    today_cases: int
+    exported_count: int
+    growth: int
 
 class SearchRequest(BaseModel):
     """Research search request / 科研搜索请求"""
@@ -292,14 +293,12 @@ async def get_doctor_accessible_cases(
     """
     Get cases accessible to doctor based on permissions and consents
     根据权限和同意书获取医生可访问的病例
+    
+    权限逻辑：
+    1. visible_to_doctors=True: 患者勾选"共享给所有医生"，所有认证医生可见
+    2. visible_to_doctors=False: 仅@提及的医生可见（通过DoctorPatientRelation验证）
     """
-
-    # Base query for shared cases with MedicalCase join
-    query = select(SharedMedicalCase).join(
-        MedicalCase, SharedMedicalCase.original_case_id == MedicalCase.id
-    ).where(
-        SharedMedicalCase.visible_to_doctors == True
-    )
+    from sqlalchemy import or_
 
     if case_type == "mentioned":
         # Find patients who @mentioned this doctor
@@ -317,12 +316,55 @@ async def get_doctor_accessible_cases(
             return []
 
         # Only cases from patients who @mentioned this doctor
-        query = query.where(MedicalCase.patient_id.in_(patient_ids))
+        # 包括 visible_to_doctors=False 的@提及病例
+        query = select(SharedMedicalCase).join(
+            MedicalCase, SharedMedicalCase.original_case_id == MedicalCase.id
+        ).where(
+            MedicalCase.patient_id.in_(patient_ids)
+        )
     elif case_type == "public":
-        # Public platform cases
-        query = query.where(
+        # Public platform cases (visible_for_research=True)
+        query = select(SharedMedicalCase).join(
+            MedicalCase, SharedMedicalCase.original_case_id == MedicalCase.id
+        ).where(
             SharedMedicalCase.visible_for_research == True
         )
+    else:
+        # "all" - 返回医生有权查看的所有病例
+        # 1. 公开共享的病例 (visible_to_doctors=True)
+        # 2. @提及该医生的病例 (通过DoctorPatientRelation关联)
+        
+        # Find patients who @mentioned this doctor
+        relation_query = select(DoctorPatientRelation.patient_id).where(
+            and_(
+                DoctorPatientRelation.doctor_id == doctor_id,
+                DoctorPatientRelation.initiated_by == 'patient_at',
+                DoctorPatientRelation.status.in_(['pending', 'active'])
+            )
+        )
+        result = await db.execute(relation_query)
+        patient_ids = [row[0] for row in result.all()]
+
+        # Query: visible_to_doctors=True OR (patient in mentioned list AND visible_to_doctors=False)
+        if patient_ids:
+            query = select(SharedMedicalCase).join(
+                MedicalCase, SharedMedicalCase.original_case_id == MedicalCase.id
+            ).where(
+                or_(
+                    SharedMedicalCase.visible_to_doctors == True,
+                    and_(
+                        MedicalCase.patient_id.in_(patient_ids),
+                        SharedMedicalCase.visible_to_doctors == False
+                    )
+                )
+            )
+        else:
+            # 没有被@提及，只能看到公开共享的病例
+            query = select(SharedMedicalCase).join(
+                MedicalCase, SharedMedicalCase.original_case_id == MedicalCase.id
+            ).where(
+                SharedMedicalCase.visible_to_doctors == True
+            )
 
     result = await db.execute(query)
     return result.scalars().all()
@@ -354,6 +396,156 @@ def anonymize_case_data(case: SharedMedicalCase) -> Dict[str, Any]:
         anonymized["anonymous_patient_profile"] = profile
     
     return anonymized
+
+
+def parse_diagnosis_for_research(diagnosis_text: str) -> Dict[str, Any]:
+    """
+    Parse AI diagnosis text to extract structured research data.
+    Extracts lab values, medications, diagnoses, etc.
+    
+    Returns a dictionary with structured fields for research CSV export.
+    """
+    import re
+    
+    if not diagnosis_text:
+        return {}
+    
+    result = {
+        "lab_values": {},
+        "primary_diagnosis": "",
+        "secondary_diagnosis": "",
+        "confidence": "",
+        "current_medications": "",
+        "recommended_medications": "",
+        "treatment_plan": "",
+        "follow_up": "",
+        "allergies": "",
+        "special_notes": ""
+    }
+    
+    try:
+        # Extract lab values using regex patterns
+        # WBC (白细胞计数)
+        wbc_match = re.search(r'白细胞.*?(\d+\.?\d*)\s*[×x]\s*10\^9/L', diagnosis_text, re.IGNORECASE)
+        if wbc_match:
+            result["lab_values"]["wbc"] = wbc_match.group(1)
+        
+        # RBC (红细胞计数)
+        rbc_match = re.search(r'红细胞.*?(\d+\.?\d*)\s*[×x]\s*10\^12/L', diagnosis_text, re.IGNORECASE)
+        if rbc_match:
+            result["lab_values"]["rbc"] = rbc_match.group(1)
+        
+        # Hemoglobin (血红蛋白)
+        hb_match = re.search(r'血红蛋白.*?(\d+\.?\d*)\s*[gG]/[lL]', diagnosis_text, re.IGNORECASE)
+        if hb_match:
+            result["lab_values"]["hb"] = hb_match.group(1)
+        
+        # Platelets (血小板)
+        plt_match = re.search(r'血小板.*?(\d+\.?\d*)\s*[×x]\s*10\^9/L', diagnosis_text, re.IGNORECASE)
+        if plt_match:
+            result["lab_values"]["plt"] = plt_match.group(1)
+        
+        # Neutrophils (中性粒细胞)
+        neut_match = re.search(r'中性粒细胞.*?绝对值.*?(\d+\.?\d*)', diagnosis_text, re.IGNORECASE)
+        if neut_match:
+            result["lab_values"]["neutrophil"] = neut_match.group(1)
+        
+        # Lymphocytes (淋巴细胞)
+        lymph_match = re.search(r'淋巴细胞.*?绝对值.*?(\d+\.?\d*)', diagnosis_text, re.IGNORECASE)
+        if lymph_match:
+            result["lab_values"]["lymphocyte"] = lymph_match.group(1)
+        
+        # CRP (C反应蛋白)
+        crp_match = re.search(r'CRP|C反应蛋白.*?(\d+\.?\d*)\s*[mM][gG]/[lL]', diagnosis_text, re.IGNORECASE)
+        if crp_match:
+            result["lab_values"]["crp"] = crp_match.group(1)
+        
+        # PCT (降钙素原)
+        pct_match = re.search(r'PCT|降钙素原.*?(\d+\.?\d*)\s*[nN][gG]/[mM][lL]', diagnosis_text, re.IGNORECASE)
+        if pct_match:
+            result["lab_values"]["pct"] = pct_match.group(1)
+        
+        # ESR (血沉)
+        esr_match = re.search(r'ESR|血沉.*?(\d+\.?\d*)\s*[mM][mM]/[hH]', diagnosis_text, re.IGNORECASE)
+        if esr_match:
+            result["lab_values"]["esr"] = esr_match.group(1)
+        
+        # Extract primary diagnosis (初步诊断)
+        primary_diag_match = re.search(r'(?:###\s*1\.|初步诊断|1\.\s*初步诊断)[\s\S]*?(?:\n\n|\n###|\Z)', diagnosis_text)
+        if primary_diag_match:
+            primary_section = primary_diag_match.group(0)
+            # Look for disease names in the diagnosis table or list
+            disease_patterns = [
+                r'\|\s*([^|]+?)(?:肺炎|支气管炎|哮喘|感染|炎症|咳嗽变异性哮喘|支原体|病毒|细菌)',
+                r'(?:诊断为|考虑|可能为)\s*([^。\n]+)',
+                r'\*\*([^*]+?)\*\*\s*\|'
+            ]
+            for pattern in disease_patterns:
+                match = re.search(pattern, primary_section, re.IGNORECASE)
+                if match:
+                    result["primary_diagnosis"] = match.group(1).strip()[:100]
+                    break
+        
+        # Extract secondary diagnosis (鉴别诊断)
+        secondary_match = re.search(r'(?:###\s*4\.|鉴别诊断|4\.\s*鉴别诊断)[\s\S]*?(?:\n\n|\n###|\Z)', diagnosis_text)
+        if secondary_match:
+            secondary_section = secondary_match.group(0)
+            # Extract disease names mentioned
+            diseases = re.findall(r'\*\*([^*]+?)\*\*', secondary_section)
+            if diseases:
+                result["secondary_diagnosis"] = ", ".join(diseases[:3])[:200]
+        
+        # Extract treatment recommendations (治疗方案)
+        treatment_match = re.search(r'(?:###\s*3\.|治疗方案|3\.\s*治疗方案)[\s\S]*?(?:\n\n|\n###|\Z)', diagnosis_text)
+        if treatment_match:
+            treatment_section = treatment_match.group(0)
+            # Look for medications
+            meds_patterns = [
+                r'(?:药物|用药|治疗).*?：\s*([^。\n]+)',
+                r'\*\*([^*]+?)\*\*.*?口服|静脉|注射|雾化',
+                r'(?:建议|推荐).*?(?:使用|给予).*?([^。\n]{10,100})'
+            ]
+            for pattern in meds_patterns:
+                med_match = re.search(pattern, treatment_section, re.IGNORECASE)
+                if med_match:
+                    result["recommended_medications"] = med_match.group(1).strip()[:200]
+                    break
+            
+            # Get general treatment plan
+            result["treatment_plan"] = treatment_section[:500].replace('\n', ' ').strip()
+        
+        # Extract follow-up recommendations (随访建议)
+        followup_match = re.search(r'(?:随访|复查|复诊|建议)[\s\S]*?(?:\n\n|\n###|\Z)', diagnosis_text)
+        if followup_match:
+            result["follow_up"] = followup_match.group(0)[:300].replace('\n', ' ').strip()
+        
+        # Extract allergies (过敏史)
+        allergy_match = re.search(r'(?:过敏史|过敏原|过敏)[：:]\s*([^。\n]+)', diagnosis_text, re.IGNORECASE)
+        if allergy_match:
+            result["allergies"] = allergy_match.group(1).strip()[:100]
+        
+        # Extract special notes (特别提醒/注意事项)
+        notes_match = re.search(r'(?:特别提醒|注意事项|重要提示)[\s\S]*?(?:\n\n|\n###|\Z)', diagnosis_text)
+        if notes_match:
+            result["special_notes"] = notes_match.group(0)[:300].replace('\n', ' ').strip()
+        
+        # Extract confidence level (诊断可能性/置信度)
+        confidence_match = re.search(r'(?:可能性|置信度|confidence)\s*[:：]\s*(\d+)%', diagnosis_text, re.IGNORECASE)
+        if confidence_match:
+            result["confidence"] = f"{confidence_match.group(1)}%"
+        else:
+            # Look for high/medium/low markers
+            if '高' in diagnosis_text[:500] or 'high' in diagnosis_text[:500].lower():
+                result["confidence"] = "高"
+            elif '中' in diagnosis_text[:500] or 'medium' in diagnosis_text[:500].lower():
+                result["confidence"] = "中"
+            elif '低' in diagnosis_text[:500] or 'low' in diagnosis_text[:500].lower():
+                result["confidence"] = "低"
+    
+    except Exception as e:
+        logger.warning(f"Error parsing diagnosis for research: {e}")
+    
+    return result
 
 
 async def log_case_access(
@@ -405,55 +597,56 @@ async def get_doctor_dashboard(
     """
     
     doctor_id = current_user.id
-    
-    # Count pending @mentions
+
+    # Count ALL @mentions (both pending and active) for this doctor
     mentions_query = select(func.count(DoctorPatientRelation.id)).where(
         and_(
             DoctorPatientRelation.doctor_id == doctor_id,
             DoctorPatientRelation.initiated_by == 'patient_at',
-            DoctorPatientRelation.status == 'pending'
+            DoctorPatientRelation.status.in_(['pending', 'active'])
         )
     )
-    pending_mentions = await db.scalar(mentions_query)
-    
-    # Get public cases by specialty (disease category)
-    cases_query = select(
-        Disease.category,
-        func.count(SharedMedicalCase.id)
-    ).select_from(
-        SharedMedicalCase
-    ).join(
-        MedicalCase, SharedMedicalCase.original_case_id == MedicalCase.id
-    ).join(
-        Disease, MedicalCase.disease_id == Disease.id
-    ).where(
-        and_(
-            SharedMedicalCase.visible_for_research == True,
-            Disease.category.isnot(None)
-        )
-    ).group_by(Disease.category)
-    
-    specialty_result = await db.execute(cases_query)
-    public_cases_by_specialty = dict(specialty_result.all())
-    
-    # Count today's new cases
+    mentioned_cases = await db.scalar(mentions_query)
+
+    # Get accessible public cases count (visible to doctors)
+    public_cases_query = select(func.count(SharedMedicalCase.id)).where(
+        SharedMedicalCase.visible_to_doctors == True
+    )
+    public_cases = await db.scalar(public_cases_query)
+
+    # Count today's new cases that this doctor can access
     today = datetime.utcnow().date()
     today_cases_query = select(func.count(SharedMedicalCase.id)).where(
-        func.date(SharedMedicalCase.created_at) == today
+        and_(
+            func.date(SharedMedicalCase.created_at) == today,
+            SharedMedicalCase.visible_to_doctors == True
+        )
     )
-    today_new_cases = await db.scalar(today_cases_query)
-    
-    # Count exported research data (simplified - count export records)
+    today_cases = await db.scalar(today_cases_query)
+
+    # Count exported research data (simplified)
     export_query = select(func.count(SharedMedicalCase.id)).where(
         SharedMedicalCase.exported_count > 0
     )
-    exported_research_data = await db.scalar(export_query)
-    
+    exported_count = await db.scalar(export_query)
+
+    # Calculate growth (today vs yesterday)
+    yesterday = today - timedelta(days=1)
+    yesterday_query = select(func.count(SharedMedicalCase.id)).where(
+        and_(
+            func.date(SharedMedicalCase.created_at) == yesterday,
+            SharedMedicalCase.visible_to_doctors == True
+        )
+    )
+    yesterday_cases = await db.scalar(yesterday_query)
+    growth = (today_cases or 0) - (yesterday_cases or 0)
+
     return DashboardStats(
-        pending_mentions=pending_mentions or 0,
-        public_cases_by_specialty=public_cases_by_specialty,
-        today_new_cases=today_new_cases or 0,
-        exported_research_data=exported_research_data or 0
+        mentioned_cases=mentioned_cases or 0,
+        public_cases=public_cases or 0,
+        today_cases=today_cases or 0,
+        exported_count=exported_count or 0,
+        growth=growth
     )
 
 
@@ -700,39 +893,14 @@ async def export_cases(
                 detail=f"Access denied to case {case_id}"
             )
     
-    # Get cases to export
-    query = select(SharedMedicalCase).where(
+    # Get cases to export with original case data
+    query = select(SharedMedicalCase, MedicalCase).join(
+        MedicalCase, SharedMedicalCase.original_case_id == MedicalCase.id
+    ).where(
         SharedMedicalCase.id.in_(export_request.case_ids)
     )
     result = await db.execute(query)
-    cases = result.scalars().all()
-    
-    # Prepare anonymized export data
-    export_data = []
-    for case in cases:
-        case_data = anonymize_case_data(case)
-        
-        if export_request.include_documents:
-            # Get PII cleaned documents
-            docs_query = select(MedicalDocument).join(MedicalCase).where(
-                and_(
-                    MedicalCase.id == case.original_case_id,
-                    MedicalDocument.pii_cleaning_status == 'completed'
-                )
-            )
-            docs_result = await db.execute(docs_query)
-            documents = docs_result.scalars().all()
-            
-            case_data["documents"] = [
-                {
-                    "filename": doc.filename,
-                    "file_type": doc.file_type,
-                    "cleaned_content": doc.cleaned_content
-                }
-                for doc in documents
-            ]
-        
-        export_data.append(case_data)
+    cases_with_original = result.all()
     
     # Update export counts in background
     background_tasks.add_task(
@@ -744,32 +912,112 @@ async def export_cases(
     
     # Generate export file
     if export_request.format == "json":
+        export_data = []
+        for shared_case, original_case in cases_with_original:
+            case_data = anonymize_case_data(shared_case)
+            
+            if export_request.include_documents:
+                # Get PII cleaned documents
+                docs_query = select(MedicalDocument).where(
+                    and_(
+                        MedicalDocument.medical_case_id == original_case.id,
+                        MedicalDocument.pii_cleaning_status == 'completed'
+                    )
+                )
+                docs_result = await db.execute(docs_query)
+                documents = docs_result.scalars().all()
+                
+                case_data["documents"] = [
+                    {
+                        "filename": doc.filename,
+                        "file_type": doc.file_type,
+                        "cleaned_content": doc.cleaned_content
+                    }
+                    for doc in documents
+                ]
+            
+            export_data.append(case_data)
+        
         return StreamingResponse(
             io.StringIO(json.dumps(export_data, indent=2, ensure_ascii=False)),
             media_type="application/json",
             headers={"Content-Disposition": "attachment; filename=research_data.json"}
         )
-    else:  # CSV
+    else:  # CSV - Research-friendly structured format
         output = io.StringIO()
-        if export_data:
-            # Flatten data for CSV
-            fieldnames = ["id", "age_range", "gender", "city_tier", "city_environment", 
-                        "anonymized_symptoms", "anonymized_diagnosis", "created_at"]
+        if cases_with_original:
+            # Define research-friendly fieldnames
+            fieldnames = [
+                # Basic Info
+                "case_id", "created_at",
+                # Demographics
+                "age_range", "gender", "city_tier", "city_environment",
+                # Symptoms
+                "symptoms", "severity", "duration",
+                # Lab Tests (common indicators)
+                "wbc", "rbc", "hb", "plt", "neutrophil", "lymphocyte",
+                "crp", "pct", "esr",
+                # Diagnosis
+                "primary_diagnosis", "secondary_diagnosis", "diagnosis_confidence",
+                # Medications
+                "current_medications", "recommended_medications",
+                # Treatment
+                "treatment_plan", "follow_up_recommendations",
+                # Notes
+                "allergies", "special_notes"
+            ]
             
             writer = csv.DictWriter(output, fieldnames=fieldnames)
             writer.writeheader()
             
-            for case in export_data:
-                profile = case["anonymous_patient_profile"] or {}
+            for shared_case, original_case in cases_with_original:
+                profile = shared_case.anonymous_patient_profile or {}
+                
+                # Parse diagnosis to extract structured information
+                diagnosis_text = shared_case.anonymized_diagnosis or ""
+                diagnosis_data = parse_diagnosis_for_research(diagnosis_text)
+                
+                # Get symptoms from original case
+                symptoms = original_case.symptoms or shared_case.anonymized_symptoms or ""
+                
+                # Get clinical findings if available
+                clinical_findings = original_case.clinical_findings or {}
+                
                 row = {
-                    "id": case["id"],
-                    "age_range": profile.get("age_range"),
-                    "gender": profile.get("gender"),
-                    "city_tier": profile.get("city_tier"),
-                    "city_environment": profile.get("city_environment"),
-                    "anonymized_symptoms": case["anonymized_symptoms"],
-                    "anonymized_diagnosis": case["anonymized_diagnosis"],
-                    "created_at": case["created_at"]
+                    "case_id": str(shared_case.id)[:8],
+                    "created_at": shared_case.created_at.isoformat() if shared_case.created_at else "",
+                    # Demographics
+                    "age_range": profile.get("age_range", ""),
+                    "gender": profile.get("gender", ""),
+                    "city_tier": profile.get("city_tier", ""),
+                    "city_environment": profile.get("city_environment", ""),
+                    # Symptoms
+                    "symptoms": symptoms[:500] if symptoms else "",  # Truncate for readability
+                    "severity": original_case.severity or "",
+                    "duration": "",  # Could be parsed from symptoms
+                    # Lab Tests - try to extract from diagnosis or clinical findings
+                    "wbc": diagnosis_data.get("lab_values", {}).get("wbc", ""),
+                    "rbc": diagnosis_data.get("lab_values", {}).get("rbc", ""),
+                    "hb": diagnosis_data.get("lab_values", {}).get("hb", ""),
+                    "plt": diagnosis_data.get("lab_values", {}).get("plt", ""),
+                    "neutrophil": diagnosis_data.get("lab_values", {}).get("neutrophil", ""),
+                    "lymphocyte": diagnosis_data.get("lab_values", {}).get("lymphocyte", ""),
+                    "crp": diagnosis_data.get("lab_values", {}).get("crp", ""),
+                    "pct": diagnosis_data.get("lab_values", {}).get("pct", ""),
+                    "esr": diagnosis_data.get("lab_values", {}).get("esr", ""),
+                    # Diagnosis
+                    "primary_diagnosis": diagnosis_data.get("primary_diagnosis", ""),
+                    "secondary_diagnosis": diagnosis_data.get("secondary_diagnosis", ""),
+                    "diagnosis_confidence": diagnosis_data.get("confidence", ""),
+                    # Medications
+                    "current_medications": diagnosis_data.get("current_medications", ""),
+                    "recommended_medications": diagnosis_data.get("recommended_medications", ""),
+                    # Treatment
+                    "treatment_plan": diagnosis_data.get("treatment_plan", ""),
+                    "follow_up_recommendations": diagnosis_data.get("follow_up", ""),
+                    # Notes
+                    "allergies": diagnosis_data.get("allergies", ""),
+                    "special_notes": diagnosis_data.get("special_notes", "")
                 }
                 writer.writerow(row)
         
@@ -954,15 +1202,47 @@ async def create_comment(
     
     Allows verified doctors to add professional suggestions and opinions.
     """
-    from app.models.models import DoctorCaseComment
+    from app.models.models import DoctorCaseComment, DoctorPatientRelation
+    from sqlalchemy import and_
     
-    # Verify case exists and is visible
+    # Verify case exists
     case = await db.get(SharedMedicalCase, case_id)
-    if not case or not case.visible_to_doctors:
+    if not case:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Case not found or not visible"
+            detail="Case not found"
         )
+    
+    # Check visibility permission
+    # 1. If visible_to_doctors=True, any verified doctor can access
+    # 2. If visible_to_doctors=False, only @mentioned doctors can access
+    if not case.visible_to_doctors:
+        # Check if this doctor was @mentioned by the patient
+        # Get the patient_id from the original medical case
+        from app.models.models import MedicalCase
+        medical_case = await db.get(MedicalCase, case.original_case_id)
+        if medical_case:
+            relation_query = select(DoctorPatientRelation).where(
+                and_(
+                    DoctorPatientRelation.doctor_id == current_user.id,
+                    DoctorPatientRelation.patient_id == medical_case.patient_id,
+                    DoctorPatientRelation.initiated_by == 'patient_at',
+                    DoctorPatientRelation.status.in_(['pending', 'active'])
+                )
+            )
+            result = await db.execute(relation_query)
+            relation = result.scalar_one_or_none()
+            
+            if not relation:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Case not visible to you"
+                )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Case not found"
+            )
     
     # Validate comment type
     valid_types = ['suggestion', 'diagnosis_opinion', 'treatment_advice', 'general']

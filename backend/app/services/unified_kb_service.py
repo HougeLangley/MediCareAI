@@ -158,26 +158,14 @@ class UnifiedKnowledgeLoader:
         return self._metadata['stats']
     
     def _infer_category(self, filename: str, content: str) -> str:
-        """从文件名和内容推断分类"""
-        fname_lower = filename.lower()
-        content_lower = content.lower()[:1000]  # 检查前1000字符
+        """
+        分类推断 - 统一使用 'unified'
         
-        # 关键词映射
-        category_keywords = {
-            'digestive': ['胃肠', '胃炎', '腹泻', '消化', '肠炎', 'gastroenteritis', 'digestive'],
-            'respiratory': ['哮喘', '支气管', '呼吸', '肺炎', 'asthma', 'respiratory', '肺'],
-            'cardiovascular': ['心脏', '心血管', '高血压', 'cardiovascular', 'heart', 'hypertension'],
-            'neurological': ['神经', '脑', '头痛', 'neurological', 'neuro', 'brain'],
-            'endocrine': ['内分泌', '糖尿病', '甲状腺', 'endocrine', 'diabetes', 'thyroid'],
-            'pediatric': ['儿童', '小儿', '儿科', 'pediatric', 'children'],
-            'dermatology': ['皮肤', '皮炎', '湿疹', 'dermatology', 'skin', 'dermatitis']
-        }
-        
-        for category, keywords in category_keywords.items():
-            if any(kw in fname_lower or kw in content_lower for kw in keywords):
-                return category
-        
-        return 'general'
+        为了简化知识库结构，所有文档统一归类为 'unified'，
+        不再按疾病类型细分。分类信息仅用于标识，不影响检索逻辑。
+        """
+        # 统一使用 'unified' 分类，不再推断具体疾病分类
+        return 'unified'
     
     def _extract_tags(self, filename: str, content: str) -> List[str]:
         """从文件名和内容提取标签"""

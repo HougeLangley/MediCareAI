@@ -1286,9 +1286,24 @@
             const statusClass = caseItem.status;
 
             // 使用marked.js渲染Markdown诊断内容
-            const diagnosisHtml = caseItem.diagnosis ?
-                marked.parse(caseItem.diagnosis) :
-                '<p style="color: #999;">暂无诊断结果</p>';
+            let diagnosisHtml;
+            if (caseItem.diagnosis) {
+                if (typeof marked !== 'undefined' && marked.parse) {
+                    diagnosisHtml = marked.parse(caseItem.diagnosis);
+                } else {
+                    // Fallback: simple markdown-like formatting
+                    diagnosisHtml = caseItem.diagnosis
+                        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                        .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+                        .replace(/\*(.*?)\*/gim, '<em>$1</em>')
+                        .replace(/`([^`]+)`/gim, '<code>$1</code>')
+                        .replace(/\n/gim, '<br>');
+                }
+            } else {
+                diagnosisHtml = '<p style="color: #999;">暂无诊断结果</p>';
+            }
 
             const modalHtml = `
                 <div class="detail-meta">
@@ -1910,7 +1925,24 @@
             if (!caseItem) return '<p style="color: #999;">请选择病历</p>';
 
             const date = new Date(caseItem.created_at).toLocaleString('zh-CN');
-            const diagnosisHtml = caseItem.diagnosis ? marked.parse(caseItem.diagnosis) : '暂无诊断';
+            let diagnosisHtml;
+            if (caseItem.diagnosis) {
+                if (typeof marked !== 'undefined' && marked.parse) {
+                    diagnosisHtml = marked.parse(caseItem.diagnosis);
+                } else {
+                    // Fallback: simple markdown-like formatting
+                    diagnosisHtml = caseItem.diagnosis
+                        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                        .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+                        .replace(/\*(.*?)\*/gim, '<em>$1</em>')
+                        .replace(/`([^`]+)`/gim, '<code>$1</code>')
+                        .replace(/\n/gim, '<br>');
+                }
+            } else {
+                diagnosisHtml = '暂无诊断';
+            }
 
             return `
                 <div class="detail-meta" style="margin-bottom: 15px;">

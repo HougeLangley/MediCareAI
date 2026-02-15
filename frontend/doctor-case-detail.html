@@ -592,7 +592,19 @@
         function formatDiagnosis(diagnosis) {
             if (!diagnosis) return '暂无诊断';
             // 使用marked.js解析Markdown
-            return marked.parse(diagnosis);
+            if (typeof marked !== 'undefined' && marked.parse) {
+                return marked.parse(diagnosis);
+            } else {
+                // Fallback: simple markdown-like formatting
+                return diagnosis
+                    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                    .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+                    .replace(/\*(.*?)\*/gim, '<em>$1</em>')
+                    .replace(/`([^`]+)`/gim, '<code>$1</code>')
+                    .replace(/\n/gim, '<br>');
+            }
         }
 
         // 格式化文档内容，提高可读性

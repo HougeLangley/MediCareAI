@@ -695,6 +695,26 @@ async def get_active_alerts(
 
 
 # AI Model Configuration Management | AI模型配置管理
+
+@router.get("/ai-models/providers")
+async def get_ai_providers(
+    admin: User = Depends(require_admin)
+) -> Dict[str, Any]:
+    """
+    Get all available AI providers | 获取所有可用的AI提供商
+
+    Returns a list of supported AI providers with their default configurations.
+    返回支持的AI提供商列表及其默认配置。
+    """
+    from app.services.ai_provider_adapters import get_all_providers
+
+    providers = get_all_providers()
+    return {
+        "success": True,
+        "providers": providers
+    }
+
+
 @router.get("/ai-models", response_model=AIModelsResponse)
 async def get_ai_models(
     db: AsyncSession = Depends(get_db),
@@ -732,10 +752,22 @@ async def get_ai_models(
     mineru_status = await get_model_status("mineru")
     embedding_status = await get_model_status("embedding")
     
+    # Get OSS status from dynamic config
+    from app.services.dynamic_config_service import DynamicConfigService
+    oss_config = await DynamicConfigService.get_oss_config(db)
+    oss_status = AIModelStatus(
+        model_type="oss",
+        api_url=oss_config.get("endpoint", ""),
+        model_id=oss_config.get("bucket", ""),
+        enabled=bool(oss_config.get("access_key_id") and oss_config.get("access_key_secret")),
+        test_status="success" if oss_config.get("source") != "none" else None
+    )
+    
     return AIModelsResponse(
         diagnosis_llm=diagnosis_status,
         mineru=mineru_status,
         embedding=embedding_status,
+        oss=oss_status,
         timestamp=datetime.utcnow()
     )
 
@@ -755,17 +787,22 @@ async def configure_ai_model(
     使用适当的安全性更新特定AI模型类型的配置。
     """
     # Validate model type
-    valid_types = ['diagnosis', 'mineru', 'embedding']
+    valid_types = ['diagnosis', 'mineru', 'embedding', 'oss']
     if model_type not in valid_types:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid model type. Must be one of: {valid_types}"
         )
     
+    # Handle OSS configuration separately
+    if model_type == 'oss':
+        return await configure_oss_model(config, db, admin, request)
+    
     # Validate API key format
+    # Note: 'diagnosis' uses 'generic' to support local LLM deployments (vLLM, Ollama, etc.)
     key_type_map = {
-        'diagnosis': 'openai',
-        'mineru': 'mineru', 
+        'diagnosis': 'generic',
+        'mineru': 'mineru',
         'embedding': 'qwen'
     }
     
@@ -786,6 +823,28 @@ async def configure_ai_model(
     # Test connection before saving
     test_result = await _test_ai_model_connection(model_type, ai_config)
     
+    # Save configuration to database (even if test fails)
+    config_service = AIModelConfigService(db)
+    model_names = {
+        "diagnosis": "诊断AI模型",
+        "mineru": "文档提取 (MinerU)",
+        "embedding": "向量嵌入模型"
+    }
+    
+    # Extract provider from config or use 'custom' as default
+    provider = getattr(config, 'provider', 'custom') or 'custom'
+
+    await config_service.save_config(
+        model_type=model_type,
+        model_name=model_names.get(model_type, model_type),
+        api_url=config.api_url,
+        api_key=config.api_key,
+        model_id=config.model_id or f"{model_type}-default",
+        enabled=config.enabled and test_result["success"],  # Only enable if test passed
+        config_metadata={"provider": provider},
+        provider=provider
+    )
+    
     if not test_result["success"]:
         # Log failed configuration attempt
         admin_logger = AdminOperationLogger(db)
@@ -800,29 +859,31 @@ async def configure_ai_model(
             user_agent=request.headers.get("user-agent") if request else "unknown"
         )
         
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Connection test failed: {test_result.get('error_message', 'Unknown error')}"
+        # Update test status to failed
+        await config_service.update_test_status(
+            model_type=model_type,
+            test_status="failed",
+            error_message=test_result.get("error_message", "Connection test failed")
+        )
+        
+        # Return success with warning (config is saved but not enabled)
+        return AIModelConfigResponse(
+            success=True,
+            message=f"配置已保存，但连接测试失败: {test_result.get('error_message', 'Unknown error')}",
+            model_type=model_type,
+            config=AIModelStatus(
+                model_type=model_type,
+                api_url=config.api_url,
+                model_id=config.model_id or f"{model_type}-default",
+                enabled=False,
+                test_status="failed",
+                last_tested=datetime.utcnow()
+            ),
+            test_result=test_result,
+            timestamp=datetime.utcnow()
         )
     
-    # Save configuration to database
-    config_service = AIModelConfigService(db)
-    model_names = {
-        "diagnosis": "诊断AI模型",
-        "mineru": "文档提取 (MinerU)",
-        "embedding": "向量嵌入模型"
-    }
-    
-    await config_service.save_config(
-        model_type=model_type,
-        model_name=model_names.get(model_type, model_type),
-        api_url=config.api_url,
-        api_key=config.api_key,
-        model_id=config.model_id or f"{model_type}-default",
-        enabled=config.enabled
-    )
-    
-    # Update test status
+    # Update test status to success
     await config_service.update_test_status(
         model_type=model_type,
         test_status="success",
@@ -868,6 +929,113 @@ async def configure_ai_model(
     )
 
 
+async def configure_oss_model(
+    config: AIModelConfigRequest,
+    db: AsyncSession,
+    admin: User,
+    request: Request = None
+) -> AIModelConfigResponse:
+    """
+    Configure OSS storage | 配置OSS存储
+    
+    Updates Alibaba Cloud OSS configuration with proper security.
+    使用适当的安全性更新阿里云OSS配置。
+    """
+    from app.services.oss_service import os_service
+    
+    # Extract OSS config from the request
+    # Frontend sends: api_url=endpoint, api_key=secret, model_id=bucket, endpoint=endpoint
+    bucket = config.model_id
+    endpoint = config.api_url  # or getattr(config, 'endpoint', config.api_url)
+    access_key_id = getattr(config, 'access_key_id', '')  # May need separate field
+    access_key_secret = config.api_key
+    
+    # If access_key_id not provided directly, try to get from metadata
+    if not access_key_id and hasattr(config, '__dict__'):
+        extra = config.__dict__.get('__pydantic_extra__', {}) or {}
+        access_key_id = extra.get('access_key_id', '')
+    
+    # Update OSS service configuration
+    os_service.update_config({
+        "access_key_id": access_key_id,
+        "access_key_secret": access_key_secret,
+        "bucket": bucket,
+        "endpoint": endpoint
+    })
+    
+    # Save to database for persistence
+    config_service = AIModelConfigService(db)
+    await config_service.save_config(
+        model_type="oss",
+        model_name="阿里云OSS存储",
+        api_url=endpoint,
+        api_key=access_key_secret,
+        model_id=bucket,
+        enabled=config.enabled,
+        config_metadata={
+            "access_key_id": access_key_id,
+            "bucket": bucket,
+            "endpoint": endpoint
+        }
+    )
+    
+    # Log the configuration
+    admin_logger = AdminOperationLogger(db)
+    await admin_logger.log_operation(
+        admin_id=admin.id,
+        operation_type="configure_oss",
+        operation_details={
+            "bucket": bucket,
+            "enabled": config.enabled,
+            "api_key_encrypted": True
+        },
+        ip_address=request.client.host if request else "unknown",
+        user_agent=request.headers.get("user-agent") if request else "unknown"
+    )
+    
+    # Test OSS connection (but don't block save if test fails)
+    test_result = os_service.health_check()
+    
+    model_status = AIModelStatus(
+        model_type="oss",
+        api_url=endpoint,
+        model_id=bucket,
+        enabled=config.enabled,
+        test_status="success" if test_result.get("healthy") else "failed",
+        last_tested=datetime.utcnow()
+    )
+    
+    # Always return success=True if config was saved, even if test failed
+    # User can test connection separately using the test button
+    if test_result.get("healthy"):
+        return AIModelConfigResponse(
+            success=True,
+            message="OSS配置已保存并测试成功",
+            model_type="oss",
+            config=model_status,
+            test_result=test_result,
+            timestamp=datetime.utcnow()
+        )
+    else:
+        return AIModelConfigResponse(
+            success=True,
+            message=f"OSS配置已保存，但连接测试失败: {test_result.get('error', 'Unknown error')}",
+            model_type="oss",
+            config=model_status,
+            test_result=test_result,
+            timestamp=datetime.utcnow()
+        )
+    
+    return AIModelConfigResponse(
+        success=test_result.get("healthy", False),
+        message="OSS配置已更新" if test_result.get("healthy") else f"OSS配置失败: {test_result.get('error', 'Unknown error')}",
+        model_type="oss",
+        config=model_status,
+        test_result=test_result,
+        timestamp=datetime.utcnow()
+    )
+
+
 @router.post("/ai-models/{model_type}/test", response_model=AIModelTestResponse)
 async def test_ai_model(
     model_type: str,
@@ -882,12 +1050,16 @@ async def test_ai_model(
     优先测试数据库中的配置，如果不存在则测试环境变量配置。
     """
     # Validate model type
-    valid_types = ['diagnosis', 'mineru', 'embedding']
+    valid_types = ['diagnosis', 'mineru', 'embedding', 'oss']
     if model_type not in valid_types:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid model type. Must be one of: {valid_types}"
         )
+    
+    # Handle OSS testing separately
+    if model_type == 'oss':
+        return await test_oss_connection(db, admin)
     
     # Get configuration from database or environment
     config_service = AIModelConfigService(db)
@@ -953,6 +1125,58 @@ async def test_ai_model(
     )
 
 
+async def test_oss_connection(
+    db: AsyncSession,
+    admin: User
+) -> AIModelTestResponse:
+    """
+    Test OSS connection | 测试OSS连接
+    
+    Tests connectivity to Alibaba Cloud OSS.
+    测试阿里云OSS连接。
+    """
+    from app.services.dynamic_config_service import DynamicConfigService
+    
+    start_time = asyncio.get_event_loop().time()
+    
+    try:
+        # Get OSS config from database
+        oss_config = await DynamicConfigService.get_oss_config(db)
+        
+        if oss_config.get("source") == "none":
+            latency_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
+            return AIModelTestResponse(
+                success=False,
+                model_type="oss",
+                latency_ms=latency_ms,
+                error_message="OSS not configured",
+                timestamp=datetime.utcnow()
+            )
+        
+        # Test OSS connection using health check
+        from app.services.oss_service import os_service
+        health_result = os_service.health_check()
+        
+        latency_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
+        
+        return AIModelTestResponse(
+            success=health_result.get("healthy", False),
+            model_type="oss",
+            latency_ms=latency_ms,
+            error_message=health_result.get("error"),
+            timestamp=datetime.utcnow()
+        )
+    except Exception as e:
+        latency_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
+        return AIModelTestResponse(
+            success=False,
+            model_type="oss",
+            latency_ms=latency_ms,
+            error_message=str(e),
+            timestamp=datetime.utcnow()
+        )
+
+
 async def _test_ai_model_connection(
     model_type: str, 
     config: AIModelConfig,
@@ -978,14 +1202,24 @@ async def _test_ai_model_connection(
                     "max_tokens": 5
                 }
 
-                # Build API URL correctly - ensure /v1 path is included
+                # Build API URL correctly - respect user-provided URL
                 api_base = config.api_url.rstrip('/')
-                if not api_base.endswith('/v1'):
-                    # If URL doesn't end with /v1, check if we need to add it
-                    if '/v1' not in api_base:
-                        api_base = f"{api_base}/v1"
-
-                test_url = f"{api_base}/chat/completions"
+                
+                logger.info(f"[DEBUG] Building test URL from: {api_base}")
+                
+                # Check if URL already ends with /chat/completions
+                if api_base.endswith('/chat/completions'):
+                    test_url = api_base
+                    logger.info(f"[DEBUG] URL ends with /chat/completions, using as-is: {test_url}")
+                # Check if URL contains version indicator (/v1, /v4, etc.) - check last path segment
+                elif api_base.split('/')[-1].startswith('v'):
+                    # URL already has version like /v1, /v4, just append chat/completions
+                    test_url = f"{api_base}/chat/completions"
+                    logger.info(f"[DEBUG] URL has version prefix, built: {test_url}")
+                else:
+                    # For generic URLs, add /v1/chat/completions
+                    test_url = f"{api_base}/v1/chat/completions"
+                    logger.info(f"[DEBUG] Generic URL, built: {test_url}")
 
                 async with session.post(
                     test_url,
@@ -1048,13 +1282,35 @@ async def _test_ai_model_connection(
                     "Content-Type": "application/json"
                 }
                 
-                payload = test_payload or {
-                    "model": config.model_id,
-                    "input": "test"
-                }
+                # Detect provider type from URL
+                is_qwen = 'dashscope' in config.api_url.lower() or 'aliyun' in config.api_url.lower()
+                
+                # Build appropriate payload based on provider
+                if test_payload:
+                    payload = test_payload
+                elif is_qwen:
+                    # Qwen/DashScope format
+                    payload = {
+                        "model": config.model_id,
+                        "input": {
+                            "texts": ["test"]
+                        }
+                    }
+                else:
+                    # OpenAI format
+                    payload = {
+                        "model": config.model_id,
+                        "input": ["test"]
+                    }
+                
+                # Use the URL as provided (don't add /embeddings)
+                # The URL should already be the complete embedding endpoint
+                test_url = config.api_url
+                if test_url.endswith('/'):
+                    test_url = test_url.rstrip('/')
                 
                 async with session.post(
-                    f"{config.api_url}/embeddings",
+                    test_url,
                     headers=headers,
                     json=payload,
                     timeout=aiohttp.ClientTimeout(total=30)
@@ -1067,7 +1323,7 @@ async def _test_ai_model_connection(
                             "success": True,
                             "latency_ms": (asyncio.get_event_loop().time() - start_time) * 1000,
                             "status_code": status_code,
-                            "response_summary": f"Embedding API responded. Dimensions: {len(response_data.get('data', [{}])[0].get('embedding', []))}"
+                            "response_summary": f"Embedding API responded. Provider: {'Qwen' if is_qwen else 'OpenAI'}"
                         }
                     else:
                         return {
@@ -1535,16 +1791,29 @@ async def _vectorize_knowledge_document(doc_id: str, filename: str, content: str
         async with AsyncSessionLocal() as db:
             try:
                 # First, check if there's an active vector embedding configuration
+                # Try vector_embedding_configs first, then fall back to ai_model_configurations
                 vector_service = VectorEmbeddingService(db)
+                config = None
                 try:
                     config = await vector_service.get_active_config()
-                    if not config:
-                        logger.error(f"❌ [Background] No active vector embedding configuration found. Please configure one in Admin > AI Model Settings.")
+                    if config:
+                        logger.info(f"✅ [Background] Using vector config from vector_embedding_configs: {config.name} ({config.provider}/{config.model_id})")
+                except Exception as e:
+                    logger.warning(f"⚠️ [Background] Could not get config from vector_embedding_configs: {e}")
+                
+                # If not found in vector_embedding_configs, try ai_model_configurations
+                if not config:
+                    try:
+                        from app.services.dynamic_config_service import DynamicConfigService
+                        embedding_config = await DynamicConfigService.get_embedding_config(db)
+                        if embedding_config and embedding_config.get("source") == "database":
+                            logger.info(f"✅ [Background] Using vector config from ai_model_configurations: {embedding_config['model_id']}")
+                        else:
+                            logger.error(f"❌ [Background] No active vector embedding configuration found. Please configure one in Admin > AI Model Settings.")
+                            return
+                    except Exception as config_error:
+                        logger.error(f"❌ [Background] Failed to get vector config: {config_error}")
                         return
-                    logger.info(f"✅ [Background] Using vector config: {config.name} ({config.provider}/{config.model_id})")
-                except Exception as config_error:
-                    logger.error(f"❌ [Background] Failed to get vector config: {config_error}")
-                    return
                 
                 # Get document info from unified KB
                 kb_loader = get_unified_knowledge_loader()
@@ -2410,3 +2679,85 @@ async def sync_doctor_verification_status(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to sync doctor verification status: {str(e)}"
         )
+
+
+# =============================================================================
+# Embedding Provider Registry APIs | 嵌入模型提供商注册表 API
+# =============================================================================
+
+@router.get("/embedding/providers", response_model=List[Dict[str, Any]])
+async def get_embedding_providers(
+    admin: User = Depends(require_admin)
+) -> List[Dict[str, Any]]:
+    """
+    Get list of supported embedding providers | 获取支持的嵌入模型提供商列表
+    
+    Returns all supported embedding providers with their default configurations.
+    返回所有支持的嵌入模型提供商及其默认配置。
+    """
+    from app.services.embedding_provider_registry import provider_registry
+    
+    try:
+        providers = provider_registry.list_providers()
+        return providers
+    except Exception as e:
+        logger.error(f"Failed to get embedding providers: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get providers: {str(e)}"
+        )
+
+
+@router.post("/embedding/validate-url", response_model=Dict[str, Any])
+async def validate_embedding_url(
+    request: Dict[str, Any],
+    admin: User = Depends(require_admin)
+) -> Dict[str, Any]:
+    """
+    Validate and format embedding API URL | 验证并格式化嵌入模型 API URL
+    
+    Validates user-provided URL and returns formatted URL with suggestions.
+    验证用户提供的 URL 并返回格式化后的 URL 和建议。
+    
+    Request body:
+    {
+        "url": "user provided url",
+        "provider": "optional provider key"
+    }
+    
+    Response:
+    {
+        "valid": bool,
+        "formatted_url": str,
+        "provider": str,
+        "warnings": List[str],
+        "suggestions": List[str]
+    }
+    """
+    from app.services.embedding_provider_registry import provider_registry
+    
+    try:
+        url = request.get("url", "")
+        provider_key = request.get("provider")
+        
+        if not url:
+            return {
+                "valid": False,
+                "formatted_url": "",
+                "provider": provider_key or "unknown",
+                "warnings": ["URL is required"],
+                "suggestions": ["Please provide an API URL"]
+            }
+        
+        result = provider_registry.validate_and_format_url(url, provider_key)
+        return result
+        
+    except Exception as e:
+        logger.error(f"Failed to validate URL: {e}")
+        return {
+            "valid": False,
+            "formatted_url": url if 'url' in locals() else "",
+            "provider": request.get("provider", "unknown") if 'request' in locals() else "unknown",
+            "warnings": [f"Validation error: {str(e)}"],
+            "suggestions": ["Please check the URL format"]
+        }

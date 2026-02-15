@@ -229,4 +229,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **作者 Author**: 苏业钦 (Su Yeqin)  
 **协议 License**: MIT License  
-**仓库 Repository**: MediCare_AI
+**仓库 Repository**: MediCareAI

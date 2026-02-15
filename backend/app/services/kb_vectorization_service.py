@@ -147,7 +147,7 @@ class KnowledgeBaseVectorizationService:
         self,
         document_content: str,
         document_title: str,
-        disease_category: str,
+        disease_category: str = 'unified',
         disease_id: uuid.UUID = None,
         source_type: str = 'disease_guideline',
         created_by: uuid.UUID = None
@@ -155,10 +155,13 @@ class KnowledgeBaseVectorizationService:
         """
         Vectorize a Markdown document / 向量化Markdown文档
         
+        注意：为了简化知识库架构，所有文档统一使用 'unified' 分类。
+        不再按疾病类型细分，实现真正的扁平化知识库结构。
+        
         Args:
             document_content: Raw markdown content
             document_title: Document title
-            disease_category: Category (e.g., 'respiratory', 'cardiovascular')
+            disease_category: Category (统一使用 'unified', 不再细分)
             disease_id: Associated disease ID
             source_type: Type of source
             created_by: Admin user ID
@@ -171,6 +174,9 @@ class KnowledgeBaseVectorizationService:
                 'chunk_ids': List[uuid.UUID]
             }
         """
+        # 统一使用 'unified' 分类
+        if not disease_category:
+            disease_category = 'unified'
         logger.info(f"Starting vectorization: {document_title}")
         
         # Check if document already exists - delete old chunks if re-uploading
@@ -273,22 +279,43 @@ class KnowledgeBaseVectorizationService:
             # Save to database
             for chunk in all_chunks:
                 self.db.add(chunk)
-            
+
             await self.db.commit()
-            
+
             logger.info(f"Vectorization complete: {len(all_chunks)} chunks")
-            
+
+            # Trigger async index refresh for knowledge base analyzer
+            # This ensures the new content is immediately available for retrieval
+            try:
+                from app.services.kb_analyzer import refresh_kb_indices
+                import asyncio
+
+                # Run index refresh in background (don't block response)
+                asyncio.create_task(self._refresh_analyzer_indices())
+                logger.info("Scheduled knowledge base analyzer index refresh")
+            except Exception as e:
+                logger.warning(f"Failed to schedule index refresh: {e}")
+
             return {
                 'total_chunks': len(all_chunks) + len(chunk_hashes) - len(all_chunks),
                 'new_chunks': len(all_chunks),
                 'duplicates': len(chunk_hashes) - len(all_chunks),
                 'chunk_ids': [chunk.id for chunk in all_chunks]
             }
-            
+
         except Exception as e:
             logger.error(f"Error generating embeddings: {e}")
             await self.db.rollback()
             raise
+
+    async def _refresh_analyzer_indices(self):
+        """Refresh knowledge base analyzer indices asynchronously"""
+        try:
+            from app.services.kb_analyzer import refresh_kb_indices
+            stats = await refresh_kb_indices(self.db)
+            logger.info(f"Knowledge base analyzer indices refreshed: {stats['unique_terms']} terms")
+        except Exception as e:
+            logger.error(f"Failed to refresh analyzer indices: {e}")
     
     def _extract_markdown_sections(self, content: str) -> List[tuple]:
         """
@@ -334,9 +361,12 @@ class KnowledgeBaseVectorizationService:
         """
         Search for similar chunks using vector similarity / 搜索相似块
         
+        注意：为支持统一知识库架构，默认搜索所有分类的文档。
+        不再按 disease_category 过滤，实现全库检索。
+        
         Args:
             query_text: Query text
-            disease_category: Filter by category
+            disease_category: (已弃用) 分类过滤参数，保留兼容性但不再使用
             top_k: Number of results
             min_similarity: Minimum similarity threshold
             
@@ -346,13 +376,10 @@ class KnowledgeBaseVectorizationService:
         # Generate query embedding
         query_embedding = await self.vector_service.generate_embedding(query_text)
         
-        # Build query
+        # Build query - 搜索所有激活的chunks，不再按分类过滤
         stmt = select(KnowledgeBaseChunk).where(
             KnowledgeBaseChunk.is_active == True
         )
-        
-        if disease_category:
-            stmt = stmt.where(KnowledgeBaseChunk.disease_category == disease_category)
         
         result = await self.db.execute(stmt)
         chunks = result.scalars().all()

@@ -193,9 +193,19 @@ async def get_document_content(
         return base_response
     
     # Build response with PII cleaning information for processed documents
+    # Extract text content from extracted_content (handle both old string format and new object format)
+    extracted_text = None
+    if document.extracted_content:
+        if isinstance(document.extracted_content, dict):
+            # New format: {text: "...", markdown: "..."}
+            extracted_text = document.extracted_content.get("text") or document.extracted_content.get("markdown")
+        elif isinstance(document.extracted_content, str):
+            # Old format: direct string
+            extracted_text = document.extracted_content
+    
     response = {
         **base_response,
-        "extracted_content": document.extracted_content,
+        "extracted_content": extracted_text,
         "extraction_metadata": document.extraction_metadata,
         # PII cleaning information
         "pii_cleaning": {
@@ -208,7 +218,13 @@ async def get_document_content(
     
     # Add cleaned content if available
     if document.cleaned_content:
-        response["cleaned_content"] = document.cleaned_content
+        # Extract text from cleaned_content object (handle format: {text: "...", metadata: {...}})
+        if isinstance(document.cleaned_content, dict):
+            response["cleaned_content"] = document.cleaned_content.get("text")
+        elif isinstance(document.cleaned_content, str):
+            response["cleaned_content"] = document.cleaned_content
+        else:
+            response["cleaned_content"] = str(document.cleaned_content)
     
     # Add detailed PII detection results if available
     if document.pii_detected:

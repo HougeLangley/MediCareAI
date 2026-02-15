@@ -235,5 +235,70 @@ async def search_knowledge_base(
         top_k=top_k,
         min_similarity=0.6
     )
-    
+
     return results
+
+
+@router.post("/knowledge-base/build-indices")
+async def build_kb_indices(
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+) -> dict:
+    """
+    Build adaptive indices from knowledge base content (Admin only).
+
+    This analyzes all knowledge base documents and builds dynamic term indices
+    for enhanced retrieval. Should be called after adding new documents.
+    """
+    if current_user.role != 'admin':
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+
+    from app.services.kb_analyzer import refresh_kb_indices
+
+    try:
+        stats = await refresh_kb_indices(db)
+        return {
+            "success": True,
+            "message": "Knowledge base indices built successfully",
+            "stats": stats
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to build indices: {str(e)}"
+        )
+
+
+@router.get("/knowledge-base/indices-stats")
+async def get_kb_indices_stats(
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+) -> dict:
+    """
+    Get knowledge base analyzer statistics (Admin only).
+
+    Returns statistics about the dynamic term indices.
+    """
+    if current_user.role != 'admin':
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+
+    from app.services.kb_analyzer import get_kb_analyzer
+
+    try:
+        analyzer = await get_kb_analyzer(db)
+        stats = analyzer.export_index_stats()
+        return {
+            "success": True,
+            "stats": stats
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get stats: {str(e)}"
+        )

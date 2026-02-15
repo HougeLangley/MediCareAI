@@ -91,9 +91,15 @@ async def process_document_extraction(
                     logger.info(f"✅ PII cleaning completed: {len(pii_cleaning_result['pii_detected'])} items detected")
                 
                 # Update document with results
+                # Prepare extracted content - include text and markdown
+                extracted_data = {
+                    "text": extraction_result.get("text_content", ""),
+                    "markdown": extraction_result.get("markdown_content", ""),
+                }
+                
                 update_values = {
                     "upload_status": "processed",
-                    "extracted_content": extraction_result.get("data"),
+                    "extracted_content": extracted_data,
                     "extraction_metadata": extraction_result.get("extraction_metadata"),
                     "updated_at": datetime.utcnow()
                 }

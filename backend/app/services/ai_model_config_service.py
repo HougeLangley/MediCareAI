@@ -193,11 +193,12 @@ class AIModelConfigService:
         api_key: str,
         model_id: str,
         enabled: bool = True,
-        config_metadata: Optional[Dict[str, Any]] = None
+        config_metadata: Optional[Dict[str, Any]] = None,
+        provider: str = "custom"
     ) -> AIModelConfiguration:
         """
         Save or update model configuration | 保存或更新模型配置
-        
+
         Args:
             model_type: Model type identifier
             model_name: Display name
@@ -206,15 +207,16 @@ class AIModelConfigService:
             model_id: Model identifier
             enabled: Whether the model is enabled
             config_metadata: Additional configuration metadata
-            
+            provider: AI provider (zhipu, kimi, deepseek, ollama, vllm, lmstudio, openai, custom)
+
         Returns:
             Saved AIModelConfiguration
         """
         # Check if config exists
         existing = await self.get_config(model_type)
-        
+
         encrypted_key = self._encrypt_key(api_key)
-        
+
         if existing:
             # Update existing
             existing.model_name = model_name
@@ -222,17 +224,18 @@ class AIModelConfigService:
             existing.api_key_encrypted = encrypted_key
             existing.model_id = model_id
             existing.enabled = enabled
+            existing.provider = provider
             if config_metadata:
                 existing.config_metadata = config_metadata
             existing.updated_at = datetime.utcnow()
-            
+
             await self.db.commit()
             await self.db.refresh(existing)
-            logger.info(f"Updated AI model configuration: {model_type}")
-            
+            logger.info(f"Updated AI model configuration: {model_type} (provider: {provider})")
+
             # Update .env file
             self._update_env_file(model_type, api_url, api_key, model_id)
-            
+
             return existing
         else:
             # Create new
@@ -243,16 +246,17 @@ class AIModelConfigService:
                 api_key_encrypted=encrypted_key,
                 model_id=model_id,
                 enabled=enabled,
+                provider=provider,
                 config_metadata=config_metadata or {}
             )
             self.db.add(config)
             await self.db.commit()
             await self.db.refresh(config)
-            logger.info(f"Created AI model configuration: {model_type}")
-            
+            logger.info(f"Created AI model configuration: {model_type} (provider: {provider})")
+
             # Update .env file
             self._update_env_file(model_type, api_url, api_key, model_id)
-            
+
             return config
     
     async def update_test_status(
@@ -353,6 +357,7 @@ class AIModelConfigService:
                 "api_url": config.api_url,
                 "api_key": decrypted_key or "",
                 "model_id": config.model_id,
+                "provider": config.provider or "custom",
                 "enabled": config.enabled,
                 "config_metadata": config.config_metadata,
                 "last_tested": config.last_tested,
@@ -393,6 +398,7 @@ class AIModelConfigService:
                     "api_url": env_config["api_url"],
                     "api_key": env_config["api_key"],
                     "model_id": env_config["model_id"],
+                    "provider": "custom",
                     "enabled": True,
                     "config_metadata": {},
                     "source": "environment"

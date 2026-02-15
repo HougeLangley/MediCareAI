@@ -23,7 +23,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="MediCare_AI API",
+    title="MediCareAI API",
     description="Intelligent Disease Management System API | 智能疾病管理系统API",
     version="1.0.0",
     docs_url="/docs" if os.getenv("DEBUG") == "true" else None,
@@ -73,7 +73,7 @@ async def root() -> Dict[str, Any]:
     Root Endpoint - Application Welcome | 根端点 - 应用欢迎信息
     """
     return {
-        "message": "MediCare_AI API",
+        "message": "MediCareAI API",
         "version": "1.0.0",
         "docs": "/docs" if os.getenv("DEBUG") == "true" else None,
         "environment": os.getenv("ENV", "production"),
@@ -95,7 +95,7 @@ async def health_check() -> Dict[str, Any]:
         
         return {
             "status": "healthy",
-            "service": "MediCare_AI API",
+            "service": "MediCareAI API",
             "version": "1.0.0",
             "python_version": sys.version,
             "environment": os.getenv("ENV", "production"),

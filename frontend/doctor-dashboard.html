@@ -539,22 +539,25 @@
 
                 if (response.ok) {
                     const data = await response.json();
-                    
-                    if (data.cases && data.cases.length > 0) {
-                        container.innerHTML = data.cases.map(caseItem => `
+                    const cases = Array.isArray(data) ? data : (data.cases || []);
+
+                    if (cases.length > 0) {
+                        container.innerHTML = cases.map(caseItem => {
+                            const profile = caseItem.anonymous_patient_profile || {};
+                            return `
                             <div class="case-item" onclick="viewCase('${caseItem.id}')">
                                 <div class="case-header">
-                                    <span class="case-title">病例 #${caseItem.id.slice(0, 8)}</span>
+                                    <span class="case-title">病例 #${caseItem.id.toString().slice(0, 8)}</span>
                                     <span class="case-badge">${caseItem.disease_category || '未分类'}</span>
                                 </div>
                                 <div class="case-meta">
-                                    <span>👤 ${caseItem.patient_age_range || '未知年龄'} · ${caseItem.patient_gender || '未知性别'}</span>
-                                    <span>📍 ${caseItem.patient_city || '未知地区'}</span>
+                                    <span>👤 ${profile.age_range || '未知年龄'} · ${profile.gender || '未知性别'}</span>
+                                    <span>📍 ${profile.city_tier || '未知地区'}</span>
                                     <span>📅 ${new Date(caseItem.created_at).toLocaleDateString('zh-CN')}</span>
                                 </div>
-                                <div class="case-summary">${caseItem.symptoms || '暂无症状描述'}</div>
+                                <div class="case-summary">${caseItem.anonymized_symptoms || '暂无症状描述'}</div>
                             </div>
-                        `).join('');
+                        `}).join('');
                     } else {
                         container.innerHTML = `
                             <div class="empty-state">

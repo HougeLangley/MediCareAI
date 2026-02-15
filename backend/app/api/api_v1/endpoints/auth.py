@@ -410,7 +410,7 @@ async def register_doctor(
         phone=doctor_data.phone,
         is_verified=False,  # Doctors need admin verification
         is_verified_doctor=False,
-        display_name=f"{doctor_data.full_name[0]}医生 | {doctor_data.hospital} | {doctor_data.specialty}"
+        display_name=None  # Let doctors set their own display name in profile
     )
     
     try:

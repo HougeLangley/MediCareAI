@@ -138,6 +138,10 @@ class APIKeySecurity:
         elif key_type == "qwen":
             # Qwen/Dashscope keys are typically longer strings
             return len(api_key) >= 10
+        elif key_type == "generic":
+            # Generic/local LLM (vLLM, Ollama, etc.) - minimal validation
+            # Allow empty for local models without auth, or any key format
+            return True
         else:
             # Generic validation
             return len(api_key) >= 10

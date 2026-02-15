@@ -1,7 +1,7 @@
-# MediCare_AI 🏥🤖 - 智能疾病管理系统 / Intelligent Disease Management System
+# MediCareAI 🏥🤖 - 智能疾病管理系统 / Intelligent Disease Management System
 
 <p align="center">
-  <img src="frontend/logo.svg" alt="MediCare_AI Logo" width="120">
+  <img src="frontend/logo.svg" alt="MediCareAI Logo" width="120">
 </p>
 
 <p align="center">
@@ -35,7 +35,7 @@
 <a name="overview-zh"></a>
 ## 📖 项目概述 (中文) | Project Overview
 
-**MediCare_AI** 是一个基于人工智能的智能疾病管理系统，专为患者随访和疾病追踪设计。系统整合了医疗指南、AI 智能诊断和文档处理功能，为医疗机构提供全面的健康支持。
+**MediCareAI** 是一个基于人工智能的智能疾病管理系统，专为患者随访和疾病追踪设计。系统整合了医疗指南、AI 智能诊断和文档处理功能，为医疗机构提供全面的健康支持。
 
 ### 🎯 核心功能
 
@@ -51,7 +51,7 @@
 <a name="overview-en"></a>
 ## 📖 Project Overview (English)
 
-**MediCare_AI** is an intelligent disease management system powered by AI, designed for patient follow-up and disease tracking. It combines medical guidelines, AI-powered diagnosis, and document processing to provide comprehensive healthcare support.
+**MediCareAI** is an intelligent disease management system powered by AI, designed for patient follow-up and disease tracking. It combines medical guidelines, AI-powered diagnosis, and document processing to provide comprehensive healthcare support.
 
 ### 🎯 Core Features
 
@@ -195,50 +195,18 @@
 - 8GB 以上内存，20GB 以上可用磁盘空间
 - Linux/macOS/Windows (需 WSL2)
 
-### Option 1: One-Click Installation (Recommended for Linux) | 一键安装（推荐 Linux 用户）
+### Quick Start | 快速开始
 
-We provide an automated installation script with **multi-language support (English/中文)** that supports 7 Linux distributions:
+MediCareAI uses Docker for deployment, supporting any platform with Docker installed (Linux, macOS, Windows with WSL2).
 
-**Supported Distributions:**
-- Ubuntu 24.04 LTS
-- Fedora 43 Server
-- openSUSE Leap 16.0 / Tumbleweed
-- AOSC OS 13.0.7
-- openEuler 24.03 LTS-SP3
-- Deepin 25
-
-**Features | 功能特性:**
-- 🌍 Multi-language interface (English / 简体中文)
-- 🔍 Automatic distro detection
-- ⚙️ Interactive configuration (AI API, network, ports)
-- 📜 User agreement and risk acknowledgment
-- 🐳 Auto-install Docker and Docker Compose v2
-- 🔧 Auto-handle SELinux/BuildKit compatibility
-- ✅ Health check after deployment
+**Prerequisites | 环境要求:**
+- Docker 20.10+ & Docker Compose 2.0+
+- 8GB+ RAM, 20GB+ free disk space
 
 ```bash
 # 1. Clone repository / 克隆仓库
-git clone https://github.com/yourusername/MediCare_AI.git
-cd MediCare_AI
-
-# 2. Run the installation script / 运行安装脚本
-sudo ./install.sh
-```
-
-The script will guide you through:
-- System compatibility check / 系统兼容性检查
-- User agreement confirmation / 用户协议确认
-- AI service configuration (optional) / AI 服务配置（可选）
-- Network configuration / 网络配置
-- Automatic Docker installation / 自动安装 Docker
-- Service deployment / 服务部署
-
-### Option 2: Manual Installation | 手动安装
-
-```bash
-# 1. Clone repository / 克隆仓库
-git clone https://github.com/yourusername/MediCare_AI.git
-cd MediCare_AI
+git clone https://github.com/yourusername/MediCareAI.git
+cd MediCareAI
 
 # 2. Configure environment / 配置环境变量
 cp .env.example .env
@@ -249,18 +217,42 @@ mkdir -p docker/nginx/ssl
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
   -keyout docker/nginx/ssl/key.pem \
   -out docker/nginx/ssl/cert.pem \
-  -subj "/C=CN/ST=State/L=City/O=MediCare_AI/CN=localhost"
+  -subj "/C=CN/ST=State/L=City/O=MediCareAI/CN=localhost"
 
 # 4. Start application / 启动应用
+# 数据库会自动初始化，管理员账号会自动创建
 docker-compose up -d
+```
 
-# 5. Initialize database / 初始化数据库
-docker-compose exec backend python -c "
-import asyncio
-from app.db.init_db import init_db
-asyncio.run(init_db())
-print('Database initialized!')
-"
+### Upgrade | 升级
+
+```bash
+git pull
+docker compose pull
+docker compose up -d
+```
+
+### Option 2: Production Deployment | 生产部署
+
+```bash
+# 1. Clone repository / 克隆仓库
+git clone https://github.com/yourusername/MediCareAI.git
+cd MediCareAI
+
+# 2. Configure environment / 配置环境变量
+cp .env.example .env
+# Edit .env with your configuration / 编辑 .env 文件
+
+# 3. Generate SSL certificates (for local testing) / 生成 SSL 证书（本地测试）
+mkdir -p docker/nginx/ssl
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout docker/nginx/ssl/key.pem \
+  -out docker/nginx/ssl/cert.pem \
+  -subj "/C=CN/ST=State/L=City/O=MediCareAI/CN=localhost"
+
+# 4. Start application / 启动应用
+# 数据库会自动初始化，管理员账号会自动创建
+docker-compose up -d
 ```
 
 ### Access Application | 访问应用
@@ -268,6 +260,18 @@ print('Database initialized!')
 - **Frontend | 前端:** http://localhost
 - **API Docs | API 文档:** http://localhost/api/docs
 - **Health Check | 健康检查:** http://localhost/health
+
+### Default Admin Account | 默认管理员账号
+
+系统启动后会自动创建默认管理员账号：
+- **邮箱 | Email:** `admin@medicare.ai`
+- **密码 | Password:** `admin123456`
+- **角色 | Role:** `admin (super)`
+
+管理员平台访问地址：
+- http://localhost:8080 (管理员平台 | Admin Platform)
+
+⚠️ **安全提示 | Security Notice:** 请在首次登录后立即修改密码！
 
 ---
 
@@ -330,7 +334,7 @@ print('Database initialized!')
 ## 📁 Project Structure | 项目结构
 
 ```
-MediCare_AI/
+MediCareAI/
 ├── 📁 backend/                    # Backend - 后端
 │   ├── 📁 app/
 │   │   ├── 📁 api/               # API Routes - API 路由
@@ -382,18 +386,18 @@ MediCare_AI/
 ├── 📁 docker/                    # Docker Config - Docker 配置
 │   ├── 📁 nginx/                 # Nginx Configuration - Nginx 配置
 │   └── 📁 postgres/              # PostgreSQL Setup - PostgreSQL 设置
-├── 📁 docs/                      # Documentation - 文档 (MDX format)
-│   ├── DEPLOYMENT.md             # Deployment Guide - 部署指南
-│   ├── ARCHITECTURE.md           # System Design - 架构设计
-│   ├── API.md                    # API Reference - API 参考
-│   ├── TESTING.md                # Testing Guide - 测试指南
-│   ├── AGENTS.mdx                # AI Assistant Context - AI 助手上下文
-│   └── RELEASE_v2.0.0.mdx        # Release Notes - 版本发布说明
+├── 📁 docs/                      # Documentation - 文档
+│   ├── RELEASE_v2.0.3.mdx        # Latest Release Notes - 最新版本发布说明
+│   ├── DEPLOYMENT.mdx            # Deployment Guide - 部署指南
+│   ├── ARCHITECTURE.mdx          # System Design - 架构设计
+│   ├── API.mdx                   # API Reference - API 参考
+│   ├── TESTING.mdx               # Testing Guide - 测试指南
+│   ├── AI_ASSISTANT.mdx          # AI Assistant Context - AI 助手上下文
+│   └── SELINUX-GUIDE.mdx         # SELinux Configuration - SELinux 配置指南
 ├── 📁 scripts/                   # Utility Scripts - 实用脚本
-│   ├── install.sh                # One-Click Install - 一键安装
 │   ├── backup.sh                 # Backup Script - 备份脚本
-│   ├── deploy.sh                 # Deployment Script - 部署脚本
-│   └── test_integration.sh       # Integration Test - 集成测试
+│   ├── test_integration.sh       # Integration Test - 集成测试
+│   └── test_login.sh             # Login Test - 登录测试
 ├── docker-compose.yml            # Docker Compose Config - 编排配置
 ├── .env.example                  # Environment Template - 环境模板
 ├── README.md                     # This File - 本文件
@@ -440,12 +444,13 @@ See [`.env.example`](.env.example) for full configuration template.
 ### Core Documentation | 核心文档
 
 - **[📖 README.md](README.md)** - This file / 本文件 (Overview & Quick Start)
-- **[🚀 DEPLOYMENT.md](docs/DEPLOYMENT.md)** - Detailed deployment guide / 详细部署指南
-- **[🏗️ ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System architecture & design / 系统架构与设计
-- **[🔌 API.md](docs/API.md)** - Complete API reference / 完整 API 参考
+- **[🚀 DEPLOYMENT.mdx](docs/DEPLOYMENT.mdx)** - Detailed deployment guide / 详细部署指南
+- **[🏗️ ARCHITECTURE.mdx](docs/ARCHITECTURE.mdx)** - System architecture & design / 系统架构与设计
+- **[🔌 API.mdx](docs/API.mdx)** - Complete API reference / 完整 API 参考
 - **[🤝 CONTRIBUTING.md](CONTRIBUTING.md)** - Development guidelines / 开发指南
-- **[🤖 AGENTS.mdx](docs/AGENTS.mdx)** - AI assistant context (MDX) / AI 助手上下文 (MDX)
-- **[📦 RELEASE_v2.0.0.mdx](docs/RELEASE_v2.0.0.mdx)** - v2.0.0 Release notes (Bilingual MDX) / v2.0.0 版本发布说明 (双语 MDX)
+- **[📦 RELEASE_v2.0.3.mdx](docs/RELEASE_v2.0.3.mdx)** - Latest release notes / 最新版本发布说明
+- **[📦 RELEASE_v2.0.0.mdx](docs/RELEASE_v2.0.0.mdx)** - v2.0.0 Release notes / v2.0.0 版本发布说明
+- **[🤖 AI_ASSISTANT.mdx](docs/AI_ASSISTANT.mdx)** - AI assistant context / AI 助手上下文
 
 ### API Endpoints Overview | API 端点概览
 
@@ -526,6 +531,16 @@ curl -X POST http://localhost:8000/api/v1/auth/login \
 
 ---
 
+## 🔧 Utility Scripts | 实用脚本
+
+位于 `scripts/` 目录：
+
+- **`backup.sh`** - 备份数据库和配置文件 / Backup database and config files
+- **`test_integration.sh`** - 集成测试 / Integration testing
+- **`test_login.sh`** - 登录测试 / Login testing
+
+---
+
 ## 🛠️ Development | 开发指南
 
 ### Backend Development | 后端开发
@@ -582,7 +597,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 ```
 MIT License
 
-Copyright (c) 2025 MediCare_AI Contributors
+Copyright (c) 2025 MediCareAI Contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -609,14 +624,14 @@ copies or substantial portions of the Software.
 
 ## 📞 Support | 支持
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/MediCare_AI/issues)
+- **Issues**: [GitHub Issues](https://github.com/yourusername/MediCareAI/issues)
 - **Documentation**: [Full Documentation](docs/)
 - **Email**: hougelangley1987@gmail.com
 
 ---
 
 <p align="center">
-  <b>MediCare_AI</b> - Empowering Healthcare with AI / 用 AI 赋能医疗健康
+  <b>MediCareAI</b> - Empowering Healthcare with AI / 用 AI 赋能医疗健康
 </p>
 
 <p align="center">

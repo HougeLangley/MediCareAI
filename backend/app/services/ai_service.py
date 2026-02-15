@@ -1,5 +1,6 @@
 """
-AI Service - Integration with GLM-4.7-Flash (llama.cpp API)
+AI Service - Multi-provider AI integration
+Supports: OpenAI, Zhipu, Kimi, DeepSeek, Ollama, vLLM, LM Studio, and custom providers
 Complete workflow: personal info + medical submission + knowledge base -> AI diagnosis
 """
 
@@ -14,18 +15,111 @@ import httpx
 
 from app.core.config import settings
 from app.services.knowledge_base_service import get_knowledge_loader
-from app.services.smart_rag_selector import SmartRAGSelector
 from app.services.system_monitoring_service import AIDiagnosisLogger
+from app.services.ai_provider_adapters import (
+    get_provider_adapter,
+    get_provider_default_url,
+    provider_requires_key,
+    AIProviderAdapter
+)
 
 logger = logging.getLogger(__name__)
 
 
 class AIService:
-    """AI Service class using llama.cpp API with streaming support."""
+    """AI Service class with multi-provider support."""
+    
+    def __init__(self):
+        """Initialize AI Service with default settings."""
+        self._api_url = settings.ai_api_url
+        self._api_key = settings.ai_api_key
+        self._model_id = settings.ai_model_id
+        self._provider = "custom"  # 默认提供商
+        self._config_source = "settings"
+        self._adapter: Optional[AIProviderAdapter] = None
+    
+    async def reload_config_from_db(self, db) -> bool:
+        """
+        Reload AI configuration from database with provider support.
+        
+        Args:
+            db: Database session
+            
+        Returns:
+            True if config was reloaded from database, False otherwise
+        """
+        try:
+            from app.services.ai_model_config_service import AIModelConfigService
+            config_service = AIModelConfigService(db)
+            config = await config_service.get_config_with_decrypted_key("diagnosis", fallback_to_env=True)
+            
+            if config and config.get("api_url"):
+                self._api_url = config["api_url"]
+                self._api_key = config.get("api_key", "")
+                self._model_id = config.get("model_id", "")
+                self._provider = config.get("config_metadata", {}).get("provider", "custom")
+                self._config_source = config.get("source", "database")
+                
+                # 创建适配器
+                self._adapter = get_provider_adapter(
+                    provider=self._provider,
+                    api_url=self._api_url,
+                    api_key=self._api_key,
+                    model_id=self._model_id
+                )
+                
+                logger.info(f"✅ AI configuration reloaded from {self._config_source}: "
+                          f"provider={self._provider}, url={self._api_url}")
+                return True
+        except Exception as e:
+            logger.error(f"Failed to reload AI config from database: {e}")
+        return False
+    
+    def _get_adapter(self) -> AIProviderAdapter:
+        """Get or create the provider adapter"""
+        if self._adapter is None:
+            self._adapter = get_provider_adapter(
+                provider=self._provider,
+                api_url=self._api_url,
+                api_key=self._api_key,
+                model_id=self._model_id
+            )
+        return self._adapter
+    
+    @property
+    def api_url(self) -> str:
+        """Get API URL for chat completions endpoint."""
+        url = self._api_url
+        # 如果URL已经包含 chat/completions，直接使用完整URL
+        if 'chat/completions' in url:
+            return url
+        # 否则确保有尾部斜杠，后续再添加 chat/completions
+        return url if url.endswith('/') else f"{self._api_url}/"
+
+    @property
+    def chat_completions_url(self) -> str:
+        """Get the full chat completions endpoint URL."""
+        base_url = self.api_url
+        # 如果URL已经包含 chat/completions，直接返回
+        if 'chat/completions' in base_url:
+            return base_url
+        # 否则拼接 chat/completions 路径
+        return f"{base_url}chat/completions"
+
+    @property
+    def api_key(self) -> str:
+        """Get API key."""
+        return self._api_key
+    
+    @property
+    def model_id(self) -> str:
+        """Get model ID."""
+        return self._model_id
     
     async def chat_with_glm(self, messages: List[Dict[str, str]]) -> Dict[str, Any]:
         """
-        Chat with GLM-4.7-Flash using llama.cpp API format.
+        Chat with AI model using provider adapter.
+        Supports multiple providers: OpenAI, Zhipu, Kimi, DeepSeek, Ollama, etc.
         
         Args:
             messages: List of conversation messages
@@ -33,28 +127,25 @@ class AIService:
         Returns:
             API response result
         """
+        adapter = self._get_adapter()
+        
         try:
             async with httpx.AsyncClient(timeout=60.0) as client:
                 response = await client.post(
-                    f"{settings.ai_api_url}chat/completions",
-                    headers={
-                        "Content-Type": "application/json",
-                        "Authorization": f"Bearer {settings.ai_api_key}"
-                    },
-                    json={
-                        "model": settings.ai_model_id,
-                        "messages": messages,
-                        "max_tokens": 8192,
-                        "temperature": 0.7,
-                        "stream": False
-                    }
+                    adapter.get_chat_completions_url(),
+                    headers=adapter.get_headers(),
+                    json=adapter.format_request_body(
+                        messages=messages,
+                        max_tokens=8192,
+                        temperature=0.7,
+                        stream=False
+                    )
                 )
 
                 if response.status_code == 200:
                     result = response.json()
-                    if 'choices' in result and result['choices']:
-                        message = result['choices'][0]['message']
-                        content = message.get('reasoning_content') or message.get('content', '')
+                    content = adapter.parse_response(result)
+                    if content:
                         return {
                             "success": True,
                             "content": content,
@@ -67,23 +158,25 @@ class AIService:
                         "data": result
                     }
                 else:
-                    logger.error(f"GLM API error: {response.status_code} - {response.text}")
+                    error_text = response.text
+                    logger.error(f"AI API error: {response.status_code} - {error_text[:500]}")
                     return {
                         "success": False,
                         "error": f"API error: {response.status_code}",
-                        "detail": response.text
+                        "detail": error_text[:1000]
                     }
 
         except httpx.TimeoutException:
-            logger.error("GLM API timeout")
+            logger.error("AI API timeout")
             return {"success": False, "error": "Request timeout"}
         except Exception as e:
-            logger.error(f"GLM API error: {str(e)}")
+            logger.error(f"AI API error: {str(e)}")
             return {"success": False, "error": str(e)}
 
     async def chat_with_glm_stream(self, messages: List[Dict[str, str]]) -> AsyncGenerator[str, None]:
         """
-        Stream chat with GLM-4.7-Flash using llama.cpp API format.
+        Stream chat with AI model using provider adapter.
+        Supports multiple providers: OpenAI, Zhipu, Kimi, DeepSeek, Ollama, etc.
         
         Args:
             messages: List of conversation messages
@@ -91,41 +184,32 @@ class AIService:
         Yields:
             Streaming text chunks
         """
+        adapter = self._get_adapter()
+        
         try:
             async with httpx.AsyncClient(timeout=300.0) as client:
                 async with client.stream(
                     "POST",
-                    f"{settings.ai_api_url}chat/completions",
-                    headers={
-                        "Content-Type": "application/json",
-                        "Authorization": f"Bearer {settings.ai_api_key}"
-                    },
-                    json={
-                        "model": settings.ai_model_id,
-                        "messages": messages,
-                        "max_tokens": 8192,
-                        "temperature": 0.7,
-                        "stream": True
-                    }
+                    adapter.get_chat_completions_url(),
+                    headers=adapter.get_headers(),
+                    json=adapter.format_request_body(
+                        messages=messages,
+                        max_tokens=8192,
+                        temperature=0.7,
+                        stream=True
+                    )
                 ) as response:
                     if response.status_code == 200:
                         async for line in response.aiter_lines():
-                            if line.startswith("data: "):
-                                data_str = line[6:]
-                                if data_str.strip() == "[DONE]":
-                                    break
-                                try:
-                                    data = json.loads(data_str)
-                                    if 'choices' in data and data['choices']:
-                                        delta = data['choices'][0].get('delta', {})
-                                        content = delta.get('content', '')
-                                        if content:
-                                            yield content
-                                except json.JSONDecodeError:
-                                    continue
+                            content = await adapter.stream_parse(line)
+                            if content is not None:
+                                yield content
+                            elif content is None and line.startswith("data: ["):
+                                # Handle [DONE] signal
+                                break
                     else:
                         error_text = await response.aread()
-                        logger.error(f"Streaming API error: {response.status_code} - {error_text}")
+                        logger.error(f"Streaming API error: {response.status_code} - {error_text[:500]}")
                         yield f"[ERROR] API error: {response.status_code}"
 
         except httpx.TimeoutException:
@@ -135,14 +219,15 @@ class AIService:
             logger.error(f"Streaming API error: {str(e)}")
             yield f"[ERROR] {str(e)}"
 
-    async def query_knowledge_base(self, symptoms: str, disease_category: str = "respiratory", patient_info: Dict = None) -> Dict[str, Any]:
+    async def query_knowledge_base(self, symptoms: str, disease_category: str = "respiratory", patient_info: Dict = None, document_texts: List[str] = None) -> Dict[str, Any]:
         """
-        Query knowledge base using Smart RAG selector with vector search.
+        Query knowledge base using Generic RAG selector with universal search.
         
         Args:
             symptoms: Symptom description
             disease_category: Disease category (legacy, now auto-detected)
             patient_info: Optional patient info for better matching
+            document_texts: Optional list of extracted text from uploaded documents
             
         Returns:
             Knowledge base information with RAG sources
@@ -150,24 +235,29 @@ class AIService:
         try:
             from sqlalchemy.ext.asyncio import AsyncSession
             from app.db.database import AsyncSessionLocal
+            from app.services.generic_rag_selector import GenericRAGSelector
             
             async with AsyncSessionLocal() as db:
-                # Use Smart RAG Selector for intelligent knowledge base selection
-                selector = SmartRAGSelector(db)
+                # Use Generic RAG Selector for universal knowledge base search
+                selector = GenericRAGSelector(db)
                 
                 patient_age = None
-                patient_gender = None
                 if patient_info:
                     patient_age = patient_info.get('age')
-                    patient_gender = patient_info.get('gender')
                 
+                # Universal search across all knowledge bases
                 rag_result = await selector.select_knowledge_bases(
                     symptoms=symptoms,
+                    document_texts=document_texts or [],
                     patient_age=patient_age,
-                    patient_gender=patient_gender,
-                    top_k=3,
-                    use_vector_search=True
+                    top_k=5,
+                    min_similarity=0.5
                 )
+                
+                # Log extracted entities for debugging
+                if rag_result.get('extracted_entities'):
+                    entities_str = ', '.join([e['text'] for e in rag_result['extracted_entities'][:5]])
+                    logger.info(f"Generic RAG extracted entities: {entities_str}")
                 
                 # Build knowledge context from selected sources
                 knowledge_context = []
@@ -429,10 +519,10 @@ class AIService:
                 else:
                     logger.warning(f"File extraction failed: {extraction_result.get('error')}")
         
-        # Query knowledge base
+        # Query knowledge base with document texts for enhanced retrieval
         logger.info(f"Querying knowledge base: {disease_category}...")
-        kb_result = await self.query_knowledge_base(symptoms, disease_category, patient_info)
-        
+        kb_result = await self.query_knowledge_base(symptoms, disease_category, patient_info, extracted_texts)
+
         # Build complete prompt
         prompt = self._build_diagnosis_prompt(
             patient_info=patient_info,
@@ -481,8 +571,8 @@ class AIService:
                     await ai_logger.log_diagnosis(
                         user_id=uuid.UUID(user_id),
                         request_type=request_type,
-                        ai_model_id=settings.ai_model_id,
-                        ai_api_url=settings.ai_api_url,
+                        ai_model_id=self.model_id,
+                        ai_api_url=self.api_url,
                         duration_ms=duration_ms,
                         tokens_input=tokens_input,
                         tokens_output=tokens_output,
@@ -519,7 +609,7 @@ class AIService:
             return {
                 "success": True,
                 "diagnosis": result['content'],
-                "model_used": settings.ai_model_id,
+                "model_used": self.model_id,
                 "tokens_used": result.get('usage', {}).get('total_tokens', 0),
                 "request_duration_ms": duration_ms,
                 "workflow": {
@@ -553,8 +643,8 @@ class AIService:
                     await ai_logger.log_diagnosis(
                         user_id=uuid.UUID(user_id),
                         request_type=request_type,
-                        ai_model_id=settings.ai_model_id,
-                        ai_api_url=settings.ai_api_url,
+                        ai_model_id=self.model_id,
+                        ai_api_url=self.api_url,
                         duration_ms=duration_ms,
                         tokens_input=tokens_input,
                         tokens_output=0,
@@ -584,7 +674,9 @@ class AIService:
         uploaded_files: Optional[List[str]] = None,
         extracted_documents: Optional[List[Dict[str, Any]]] = None,
         disease_category: str = "respiratory",
-        language: str = "zh"
+        language: str = "zh",
+        user_id: Optional[str] = None,
+        db: Optional[Any] = None
     ) -> AsyncGenerator[str, None]:
         """
         Complete diagnosis workflow (streaming).
@@ -593,7 +685,18 @@ class AIService:
 
         Args:
             language: Language preference - "zh" for Chinese, "en" for English
+            user_id: User ID for logging
+            db: Database session for logging
         """
+        import time
+        import uuid
+        start_time = time.time()
+        request_type = "comprehensive_diagnosis"
+        status = "success"
+        error_message = None
+        tokens_input = 0
+        tokens_output = 0
+
         logger.info(f"Starting comprehensive diagnosis workflow (streaming, language: {language})...")
 
         # Process uploaded files with MinerU (legacy support)
@@ -631,11 +734,11 @@ class AIService:
                 if content:
                     extracted_texts.append(f"[{doc.get('original_filename', 'Document')}]:\n{content[:2000]}")
                     logger.info(f"Added document content: {doc.get('original_filename', 'Document')}, length: {len(content)}")
-        
-        # Query knowledge base
+
+        # Query knowledge base with document texts for enhanced retrieval
         logger.info(f"Querying knowledge base: {disease_category}...")
-        kb_result = await self.query_knowledge_base(symptoms, disease_category, patient_info)
-        
+        kb_result = await self.query_knowledge_base(symptoms, disease_category, patient_info, extracted_texts)
+
         # Build complete prompt
         prompt = self._build_diagnosis_prompt(
             patient_info=patient_info,
@@ -693,12 +796,40 @@ Please answer in English."""
         
         chunk_count = 0
         total_chars = 0
-        async for chunk in self.chat_with_glm_stream(messages):
-            chunk_count += 1
-            total_chars += len(chunk)
-            yield chunk
-        
-        logger.info(f"Streaming diagnosis completed, {chunk_count} chunks, {total_chars} characters")
+        try:
+            async for chunk in self.chat_with_glm_stream(messages):
+                chunk_count += 1
+                total_chars += len(chunk)
+                yield chunk
+        except Exception as e:
+            status = "error"
+            error_message = str(e)
+            logger.error(f"Streaming diagnosis failed: {error_message}")
+            raise
+        finally:
+            # Calculate duration
+            duration_ms = int((time.time() - start_time) * 1000)
+
+            # Log AI diagnosis if user_id and db are provided
+            if user_id and db:
+                try:
+                    from app.services.system_monitoring_service import AIDiagnosisLogger
+                    ai_logger = AIDiagnosisLogger(db)
+                    await ai_logger.log_diagnosis(
+                        user_id=uuid.UUID(user_id),
+                        request_type=request_type,
+                        ai_model_id=self.model_id,
+                        ai_api_url=self.api_url,
+                        duration_ms=duration_ms,
+                        tokens_input=tokens_input,
+                        tokens_output=total_chars // 4,  # Estimate tokens from characters
+                        status=status,
+                        error_message=error_message or ""
+                    )
+                except Exception as log_error:
+                    logger.warning(f"Failed to log AI diagnosis: {log_error}")
+
+            logger.info(f"Streaming diagnosis completed, {chunk_count} chunks, {total_chars} characters, status: {status}")
 
     def _build_diagnosis_prompt(
         self,

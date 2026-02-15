@@ -11,7 +11,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     """Configuration settings for the MediCare AI application."""
     
-    database_url: str = "postgresql+asyncpg://medicare_user:password@medicare_postgres:5432/medicare_ai"
+    database_url: str = "postgresql+asyncpg://medicare_user:password@medicare_postgres:5432/medicareai"
     redis_url: str = "redis://:password@medicare_redis:6379/0"
     redis_password: Optional[str] = None
     

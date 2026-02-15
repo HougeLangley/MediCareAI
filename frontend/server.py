@@ -9,11 +9,10 @@ import threading
 import subprocess
 import os
 
-# 配置
-HOST = '0.0.0.0'
-PORT = 3000
-BACKEND_URL = 'http://0.0.0.0:8000'
-LOG_FILE = 'frontend.log'
+HOST = os.getenv('FRONTEND_HOST', '0.0.0.0')
+PORT = int(os.getenv('FRONTEND_PORT', '3000'))
+BACKEND_URL = os.getenv('BACKEND_URL', 'http://backend:8000')
+LOG_FILE = os.getenv('LOG_FILE', 'frontend.log')
 
 class MediCareHandler(http.server.SimpleHTTPRequestHandler):
     """MediCare AI 请求处理器"""

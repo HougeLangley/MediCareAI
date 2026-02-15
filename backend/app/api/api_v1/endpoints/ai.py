@@ -1,7 +1,7 @@
 """
 AI 诊断 API 端点 - 完整工作流集成
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
@@ -82,7 +82,7 @@ async def create_shared_case(db: AsyncSession, medical_case, patient: User):
         share_type='platform_anonymous',
         consent_version='1.0',
         consent_text='患者同意将匿名化后的诊断信息共享给认证医生用于医疗咨询和学术研究。',
-        ip_address='127.0.0.1',
+        ip_address='127.0.0.1',  # TODO: Get actual client IP from request
         is_active=True
     )
     db.add(consent)
@@ -129,6 +129,7 @@ async def share_case_with_doctor(db: AsyncSession, medical_case, patient: User, 
     pii_cleaner = PIICleanerService()
     
     if not shared_case:
+        # 创建新的共享病例记录（仅特定医生可见）
         valid_until = datetime.utcnow() + timedelta(days=365)
         
         consent = DataSharingConsent(
@@ -168,7 +169,7 @@ async def share_case_with_doctor(db: AsyncSession, medical_case, patient: User, 
             anonymous_patient_profile=anonymous_profile,
             anonymized_symptoms=anonymized_symptoms,
             anonymized_diagnosis=anonymized_diagnosis,
-            visible_to_doctors=True,
+            visible_to_doctors=False,
             visible_for_research=False
         )
         db.add(shared_case)
@@ -244,7 +245,8 @@ async def diagnose_symptoms(
 async def comprehensive_diagnosis(
     request: ComprehensiveDiagnosisRequest,
     current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    http_request: Request = None
 ):
     """
     完整诊断工作流
@@ -291,18 +293,44 @@ async def comprehensive_diagnosis(
             documents = result.scalars().all()
             
             for doc in documents:
+                # Extract text content from extracted_content (handle both old string format and new object format)
+                extracted_text = None
+                if doc.extracted_content:
+                    if isinstance(doc.extracted_content, dict):
+                        # New format: {text: "...", markdown: "..."}
+                        extracted_text = doc.extracted_content.get("text") or doc.extracted_content.get("markdown")
+                    elif isinstance(doc.extracted_content, str):
+                        # Old format: direct string
+                        extracted_text = doc.extracted_content
+                
+                # Extract text from cleaned_content object (handle format: {text: "...", metadata: {...}})
+                cleaned_text = None
+                if doc.cleaned_content:
+                    if isinstance(doc.cleaned_content, dict):
+                        cleaned_text = doc.cleaned_content.get("text")
+                    elif isinstance(doc.cleaned_content, str):
+                        cleaned_text = doc.cleaned_content
+                
                 extracted_documents.append({
                     "id": str(doc.id),
                     "original_filename": doc.original_filename,
-                    "extracted_content": doc.extracted_content,
-                    "cleaned_content": doc.cleaned_content,
+                    "extracted_content": extracted_text,
+                    "cleaned_content": cleaned_text,
                     "pii_cleaning_status": doc.pii_cleaning_status,
                     "pii_detected": doc.pii_detected or []
                 })
             
             logger.info(f"Found {len(extracted_documents)} processed documents")
         
-        # 3. 调用完整诊断流程
+        # 3. Reload AI configuration from database before calling AI
+        logger.info("Reloading AI configuration from database...")
+        ai_config_reloaded = await ai_service.reload_config_from_db(db)
+        if ai_config_reloaded:
+            logger.info("✅ AI configuration reloaded from database")
+        else:
+            logger.warning("⚠️ Using fallback AI configuration from environment")
+        
+        # 4. 调用完整诊断流程
         result = await ai_service.comprehensive_diagnosis(
             symptoms=request.symptoms,
             patient_info=patient_info,
@@ -432,11 +460,29 @@ async def comprehensive_diagnosis_stream(
             documents = result.scalars().all()
 
             for doc in documents:
+                # Extract text content from extracted_content (handle both old string format and new object format)
+                extracted_text = None
+                if doc.extracted_content:
+                    if isinstance(doc.extracted_content, dict):
+                        # New format: {text: "...", markdown: "..."}
+                        extracted_text = doc.extracted_content.get("text") or doc.extracted_content.get("markdown")
+                    elif isinstance(doc.extracted_content, str):
+                        # Old format: direct string
+                        extracted_text = doc.extracted_content
+                
+                # Extract text from cleaned_content object (handle format: {text: "...", metadata: {...}})
+                cleaned_text = None
+                if doc.cleaned_content:
+                    if isinstance(doc.cleaned_content, dict):
+                        cleaned_text = doc.cleaned_content.get("text")
+                    elif isinstance(doc.cleaned_content, str):
+                        cleaned_text = doc.cleaned_content
+                
                 extracted_documents.append({
                     "id": str(doc.id),
                     "original_filename": doc.original_filename,
-                    "extracted_content": doc.extracted_content,
-                    "cleaned_content": doc.cleaned_content,
+                    "extracted_content": extracted_text,
+                    "cleaned_content": cleaned_text,
                     "pii_cleaning_status": doc.pii_cleaning_status,
                     "pii_detected": doc.pii_detected or []
                 })
@@ -444,9 +490,9 @@ async def comprehensive_diagnosis_stream(
             logger.info(f"Found {len(extracted_documents)} processed documents")
 
         # 3. 查询知识库（在流式输出前获取，以便在结束时返回）
-        from app.services.smart_rag_selector import SmartRAGSelector
+        from app.services.generic_rag_selector import GenericRAGSelector
         from datetime import datetime
-        
+
         kb_sources = []
         kb_selection_reasoning = ""
         try:
@@ -460,13 +506,22 @@ async def comprehensive_diagnosis_stream(
                     patient_age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
                 except (ValueError, TypeError):
                     patient_age = None
-            
-            selector = SmartRAGSelector(db)
+
+            # 提取文档内容用于增强检索
+            document_texts = []
+            for doc in extracted_documents:
+                if doc.get('cleaned_content'):
+                    document_texts.append(doc['cleaned_content'])
+                elif doc.get('extracted_content'):
+                    document_texts.append(doc['extracted_content'])
+
+            selector = GenericRAGSelector(db)
             rag_result = await selector.select_knowledge_bases(
                 symptoms=request.symptoms,
-                patient_age=patient_age,  # 传递整数年龄
-                top_k=3,
-                use_vector_search=True
+                document_texts=document_texts,
+                patient_age=patient_age,
+                top_k=5,
+                min_similarity=0.5
             )
             
             # 格式化知识库源信息
@@ -507,7 +562,15 @@ async def comprehensive_diagnosis_stream(
         except Exception as kb_error:
             logger.warning(f"流式诊断前知识库查询失败: {kb_error}")
 
-        # 4. 调用流式诊断流程
+        # 4. Reload AI configuration from database before streaming
+        logger.info("Reloading AI configuration from database for streaming...")
+        ai_config_reloaded = await ai_service.reload_config_from_db(db)
+        if ai_config_reloaded:
+            logger.info("✅ AI configuration reloaded from database for streaming")
+        else:
+            logger.warning("⚠️ Using fallback AI configuration from environment for streaming")
+
+        # 5. 调用流式诊断流程
         async def generate_stream():
             """生成流式输出"""
             full_diagnosis = ""
@@ -520,7 +583,9 @@ async def comprehensive_diagnosis_stream(
                 uploaded_files=request.uploaded_files or [],
                 extracted_documents=extracted_documents if extracted_documents else None,
                 disease_category=request.disease_category,
-                language=request.language
+                language=request.language,
+                user_id=str(current_user.id),
+                db=db
             ):
                 full_diagnosis += chunk
                 # 发送 SSE 格式数据
@@ -619,7 +684,7 @@ async def comprehensive_diagnosis_stream(
                     'case_id': str(medical_case.id),
                     'saved_to_records': True,
                     'status': 'completed',
-                    'model_used': settings.ai_model_id,
+                    'model_used': ai_service.model_id,  # 使用实际配置的模型ID
                     'tokens_used': len(full_diagnosis) * 2,  # 估算token用量
                     'created_at': medical_case.created_at.isoformat() if medical_case.created_at else datetime.utcnow().isoformat(),
                     'knowledge_base_sources': kb_sources,

@@ -5,25 +5,11 @@
   "version": "2.0.0",
   "structure": "unified",
   "created_at": "2024-02-11",
-  "updated_at": "2026-02-12T09:21:11.929386",
+  "updated_at": "2026-02-13T14:19:44.754014",
   "documents": [
     {
-      "filename": "儿童暴发性心肌炎诊治专家建议（2025）.md",
-      "title": "儿童暴发性心肌炎诊治专家建议（2025）",
-      "category": "cardiovascular",
-      "tags": [
-        "指南",
-        "儿童",
-        "诊断",
-        "治疗"
-      ],
-      "source": "admin_upload_admin@medicare.ai",
-      "file_size": 57974,
-      "added_at": "2026-02-11T23:12:43.014673"
-    },
-    {
-      "filename": "儿童肺炎支原体肺炎诊疗指南（2025年版）.md",
-      "title": "儿童肺炎支原体肺炎诊疗指南（2025年版）",
+      "filename": "儿童肺炎支原体肺炎诊疗指南（2025年版）_2020467720844816384.md",
+      "title": "儿童肺炎支原体肺炎诊疗指南（2025年版）_2020467720844816384",
       "category": "respiratory",
       "tags": [
         "指南",
@@ -31,11 +17,11 @@
       ],
       "source": "admin_upload_admin@medicare.ai",
       "file_size": 46939,
-      "added_at": "2026-02-11T23:13:38.691775"
+      "added_at": "2026-02-13T13:30:31.661535"
     },
     {
-      "filename": "儿童急性感染性腹泻病诊疗规范（2020年版）.md",
-      "title": "儿童急性感染性腹泻病诊疗规范（2020年版）",
+      "filename": "儿童急性感染性腹泻病诊疗规范（2020年版）_2020469515163877376.md",
+      "title": "儿童急性感染性腹泻病诊疗规范（2020年版）_2020469515163877376",
       "category": "digestive",
       "tags": [
         "指南",
@@ -45,12 +31,12 @@
         "治疗"
       ],
       "source": "admin_upload_admin@medicare.ai",
-      "file_size": 35467,
-      "added_at": "2026-02-11T23:14:24.069946"
+      "file_size": 35642,
+      "added_at": "2026-02-13T13:32:53.295066"
     },
     {
-      "filename": "儿童急性呼吸道感染病原学诊断与临床管理专家共识（2025版）.md",
-      "title": "儿童急性呼吸道感染病原学诊断与临床管理专家共识（2025版）",
+      "filename": "儿童急性呼吸道感染病原学诊断与临床管理专家共识（2025版）_2020467568734187520.md",
+      "title": "儿童急性呼吸道感染病原学诊断与临床管理专家共识（2025版）_2020467568734187520",
       "category": "respiratory",
       "tags": [
         "指南",
@@ -61,23 +47,25 @@
       ],
       "source": "admin_upload_admin@medicare.ai",
       "file_size": 78967,
-      "added_at": "2026-02-11T23:14:54.422251"
+      "added_at": "2026-02-13T13:34:05.676837"
     },
     {
-      "filename": "轮状病毒相关中枢神经系统并发症的发生机制研究进展.md",
-      "title": "轮状病毒相关中枢神经系统并发症的发生机制研究进展",
-      "category": "digestive",
+      "filename": "儿童急性呼吸道感染性疾病合理用药指南_2020467659398262784.md",
+      "title": "儿童急性呼吸道感染性疾病合理用药指南_2020467659398262784",
+      "category": "respiratory",
       "tags": [
+        "指南",
         "儿童",
+        "急性",
         "治疗"
       ],
       "source": "admin_upload_admin@medicare.ai",
-      "file_size": 27694,
-      "added_at": "2026-02-12T06:57:46.229955"
+      "file_size": 49897,
+      "added_at": "2026-02-13T13:35:00.769756"
     },
     {
-      "filename": "儿童支气管哮喘规范化诊治建议（2020年版）.md",
-      "title": "儿童支气管哮喘规范化诊治建议（2020年版）",
+      "filename": "儿童支气管哮喘规范化诊治建议（2020年版）_2020467774649352192.md",
+      "title": "儿童支气管哮喘规范化诊治建议（2020年版）_2020467774649352192",
       "category": "respiratory",
       "tags": [
         "指南",
@@ -87,11 +75,11 @@
       ],
       "source": "admin_upload_admin@medicare.ai",
       "file_size": 55327,
-      "added_at": "2026-02-12T09:20:30.604113"
+      "added_at": "2026-02-13T13:40:25.123601"
     },
     {
-      "filename": "儿童支气管哮喘诊断与防治指南（2025）.md",
-      "title": "儿童支气管哮喘诊断与防治指南（2025）",
+      "filename": "儿童支气管哮喘诊断与防治指南（2025）_2020467826461585408.md",
+      "title": "儿童支气管哮喘诊断与防治指南（2025）_2020467826461585408",
       "category": "respiratory",
       "tags": [
         "指南",
@@ -102,16 +90,39 @@
       ],
       "source": "admin_upload_admin@medicare.ai",
       "file_size": 71284,
-      "added_at": "2026-02-12T09:21:11.929357"
+      "added_at": "2026-02-13T13:41:02.723320"
+    },
+    {
+      "filename": "轮状病毒肠炎伴良性婴幼儿惊厥的临床研究_2020468697740161024.md",
+      "title": "轮状病毒肠炎伴良性婴幼儿惊厥的临床研究_2020468697740161024",
+      "category": "digestive",
+      "tags": [
+        "儿童",
+        "治疗"
+      ],
+      "source": "admin_upload_admin@medicare.ai",
+      "file_size": 10570,
+      "added_at": "2026-02-13T14:18:56.628737"
+    },
+    {
+      "filename": "轮状病毒相关中枢神经系统并发症的发生机制研究进展_2020468906415169536.md",
+      "title": "轮状病毒相关中枢神经系统并发症的发生机制研究进展_2020468906415169536",
+      "category": "digestive",
+      "tags": [
+        "儿童",
+        "治疗"
+      ],
+      "source": "admin_upload_admin@medicare.ai",
+      "file_size": 27694,
+      "added_at": "2026-02-13T14:19:44.753954"
     }
   ],
   "stats": {
-    "total_documents": 7,
+    "total_documents": 8,
     "categories": [
-      "digestive",
-      "cardiovascular",
-      "respiratory"
+      "respiratory",
+      "digestive"
     ],
-    "last_updated": "2026-02-12T09:21:11.929382"
+    "last_updated": "2026-02-13T14:19:44.754009"
   }
 }

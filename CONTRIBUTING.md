@@ -1,6 +1,6 @@
-# Contributing to MediCare_AI
+# Contributing to MediCareAI
 
-First off, thank you for considering contributing to MediCare_AI! It's people like you that make MediCare_AI such a great tool.
+First off, thank you for considering contributing to MediCareAI! It's people like you that make MediCareAI such a great tool.
 
 ## Code of Conduct
 
@@ -49,8 +49,8 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 
 1. **Fork and clone the repository**
 ```bash
-git clone https://github.com/YOUR_USERNAME/MediCare_AI.git
-cd MediCare_AI
+git clone https://github.com/YOUR_USERNAME/MediCareAI.git
+cd MediCareAI
 ```
 
 2. **Create a branch for your changes**

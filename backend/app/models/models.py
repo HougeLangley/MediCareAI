@@ -965,6 +965,7 @@ class AdminOperationLog(Base):
         'ai_model_change',
         'configure_ai_model',
         'configure_ai_model_failed',
+        'configure_oss',
         'vector_model_test',
         'knowledge_base_update',
         'upload_knowledge_document',
