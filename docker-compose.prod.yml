@@ -66,8 +66,8 @@ services:
       test: ["CMD-SHELL", "pg_isready -U medicare_user -d medicare_ai"]
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 30s
+      retries: 10
+      start_period: 60s
 
   # Redis（生产优化）
   redis:
