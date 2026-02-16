@@ -1,8 +1,18 @@
 #!/bin/bash
 # MediCareAI Docker 数据清理脚本
 # 用于完全清理数据持久化，恢复干净状态
+#
+# 用法:
+#   ./scripts/cleanup-docker.sh        # 交互式模式
+#   ./scripts/cleanup-docker.sh -y     # 非交互式模式（自动确认）
 
 set -e
+
+# 解析参数
+AUTO_CONFIRM=false
+if [ "$1" == "-y" ] || [ "$1" == "--yes" ]; then
+    AUTO_CONFIRM=true
+fi
 
 echo "========================================"
 echo "MediCareAI Docker 数据清理工具"
@@ -33,19 +43,30 @@ if [ ! -f "docker-compose.yml" ]; then
     exit 1
 fi
 
-echo -e "${YELLOW}⚠️  警告: 此操作将删除所有持久化数据！${NC}"
-echo "包括:"
-echo "  - PostgreSQL 数据库数据"
-echo "  - Redis 缓存数据"
-echo "  - 上传的文件"
-echo "  - 知识库文档"
-echo ""
-echo -n "是否继续? [y/N]: "
-read -r response
-
-if [[ ! "$response" =~ ^[Yy]$ ]]; then
-    echo "已取消"
-    exit 0
+# 如果不是自动确认模式，显示警告并等待确认
+if [ "$AUTO_CONFIRM" = false ]; then
+    echo -e "${YELLOW}⚠️  警告: 此操作将删除所有持久化数据！${NC}"
+    echo "包括:"
+    echo "  - PostgreSQL 数据库数据"
+    echo "  - Redis 缓存数据"
+    echo "  - 上传的文件"
+    echo "  - 知识库文档"
+    echo ""
+    echo -n "是否继续? [y/N] (10秒后默认取消): "
+    
+    # 使用 read 的超时功能
+    if read -t 10 -r response; then
+        if [[ ! "$response" =~ ^[Yy]$ ]]; then
+            echo "已取消"
+            exit 0
+        fi
+    else
+        echo ""
+        echo "超时，已取消"
+        exit 0
+    fi
+else
+    echo -e "${YELLOW}⚠️  自动模式: 将删除所有持久化数据${NC}"
 fi
 
 echo ""
