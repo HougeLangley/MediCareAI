@@ -405,16 +405,13 @@ MediCareAI/
 │   ├── 📁 nginx/                 # Nginx Configuration - Nginx 配置
 │   └── 📁 postgres/              # PostgreSQL Setup - PostgreSQL 设置
 ├── 📁 docs/                      # Documentation - 文档
-│   ├── RELEASE_v2.0.5.mdx        # Latest Release Notes - 最新版本发布说明
-│   ├── RELEASE_v2.0.4.mdx        # Release v2.0.4
-│   ├── RELEASE_v2.0.3.mdx        # Release v2.0.3
-│   ├── RELEASE_v2.0.0.mdx        # Release v2.0.0
 │   ├── DEPLOYMENT.mdx            # Deployment Guide - 部署指南
 │   ├── ARCHITECTURE.mdx          # System Design - 架构设计
 │   ├── API.mdx                   # API Reference - API 参考
 │   ├── TESTING.mdx               # Testing Guide - 测试指南
 │   ├── AI_ASSISTANT.mdx          # AI Assistant Context - AI 助手上下文
-│   └── SELINUX-GUIDE.mdx         # SELinux Configuration - SELinux 配置指南
+│   ├── SELINUX-GUIDE.mdx         # SELinux Configuration - SELinux 配置指南
+│   └── TROUBLESHOOTING.mdx       # Troubleshooting Guide - 故障排除指南
 ├── 📁 scripts/                   # Utility Scripts - 实用脚本
 │   ├── backup.sh                 # Backup Script - 备份脚本
 │   ├── test_integration.sh       # Integration Test - 集成测试
@@ -474,10 +471,9 @@ See [`.env.example`](.env.example) for full configuration template.
 - **[🏗️ ARCHITECTURE.mdx](docs/ARCHITECTURE.mdx)** - System architecture & design / 系统架构与设计
 - **[🔌 API.mdx](docs/API.mdx)** - Complete API reference / 完整 API 参考
 - **[🤝 CONTRIBUTING.md](CONTRIBUTING.md)** - Development guidelines / 开发指南
-- **[📦 RELEASE_v2.0.5.mdx](docs/RELEASE_v2.0.5.mdx)** - Latest release notes / 最新版本发布说明
-- **[📦 RELEASE_v2.0.4.mdx](docs/RELEASE_v2.0.4.mdx)** - v2.0.4 Release notes / v2.0.4 版本发布说明
-- **[📦 RELEASE_v2.0.3.mdx](docs/RELEASE_v2.0.3.mdx)** - v2.0.3 Release notes / v2.0.3 版本发布说明
+- **[📝 CHANGELOG.md](CHANGELOG.md)** - Full release history / 完整版本历史
 - **[🤖 AI_ASSISTANT.mdx](docs/AI_ASSISTANT.mdx)** - AI assistant context / AI 助手上下文
+- **[🆘 TROUBLESHOOTING.mdx](docs/TROUBLESHOOTING.mdx)** - Troubleshooting & emergency fixes / 故障排除与应急修复
 
 ### API Endpoints Overview | API 端点概览
 

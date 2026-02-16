@@ -11,6 +11,133 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.7] - 2026-02-16
+
+### 主要更新 Highlights | Major Updates
+
+#### 📚 文档重构与合并 (Documentation Consolidation)
+- **删除分散的 RELEASE 文件** Removed scattered RELEASE files
+  - 删除 `docs/RELEASE_v2.0.0.mdx`、`docs/RELEASE_v2.0.1.mdx`、`docs/RELEASE_v2.0.3.mdx`
+  - 所有发布说明统一合并到根目录 `CHANGELOG.md`
+  - 简化维护，避免文档分散
+
+#### 🆘 新增故障排除指南 (New Troubleshooting Guide)
+- **创建 TROUBLESHOOTING.mdx** Created comprehensive troubleshooting documentation
+  - 应急脚本说明 (`cleanup-docker.sh`)
+  - 常见问题解决方案
+  - 系统维护任务指南
+  - 调试技巧和日志查看
+  - SELinux 配置参考
+
+#### 🔧 项目清理 (Project Cleanup)
+- **删除临时修复脚本** Removed temporary fix scripts
+  - 删除 `fix_env_mount.sh` (环境挂载修复脚本)
+  - 该功能已通过 Docker 卷挂载优化解决
+
+#### 🗑️ 遗留文件清理 (Legacy Cleanup)
+- **清理旧知识库目录** Cleaned up old knowledge base directory
+  - 删除 `backend/data/knowledge_bases/diseases/` 目录及内容
+  - 统一使用 `unified/` 目录作为知识库来源
+
+### 新增功能 Added
+- `docs/TROUBLESHOOTING.mdx` - 故障排除与应急修复指南
+- `scripts/cleanup-docker.sh` - Docker 环境清理脚本（已在 v2.0.3 添加，现正式纳入文档）
+
+### 变更 Changed
+- `CHANGELOG.md` - 新增 v2.0.1、v2.0.3、v2.0.7 详细发布记录
+- `README.md` - 更新文档结构，移除 RELEASE 文件引用，添加 TROUBLESHOOTING 链接
+- `docs/` 目录结构简化，移除 3 个 RELEASE 文件
+
+### 删除 Removed
+- `docs/RELEASE_v2.0.0.mdx` - 内容已合并到 CHANGELOG.md
+- `docs/RELEASE_v2.0.1.mdx` - 内容已合并到 CHANGELOG.md
+- `docs/RELEASE_v2.0.3.mdx` - 内容已合并到 CHANGELOG.md
+- `fix_env_mount.sh` - 临时修复脚本，功能已整合
+
+### 文档更新 Documentation Updates
+- **README.md**: 更新 docs/ 目录树，修正文档导航链接
+- **CHANGELOG.md**: 统一所有版本发布记录，支持中英双语
+- **TROUBLESHOOTING.mdx**: 新增完整故障排除指南（262行）
+
+---
+
+## [2.0.3] - 2026-02-16
+
+### 主要更新 Highlights | Major Updates
+
+#### 🔧 AI 诊断数据持久化修复 (AI Diagnosis Data Persistence Fix)
+- **修复请求类型枚举错误** Fixed request_type enum error
+  - 将 `"comprehensive_diagnosis_stream"` 改为 `"comprehensive_diagnosis"`
+  - 解决数据库事务回滚导致诊断数据未保存问题
+  - 病例状态现在正确更新为 "completed" (已完成)
+  - 模型 ID 和 Token 用量现在正确显示
+  
+#### 🔐 医生评论权限逻辑修复 (Doctor Comment Permission Logic Fix)
+- **@提及医生权限修复** @mention Doctor Permission Fix
+  - 修复 `visible_to_doctors=False` 时 @提及医生无法评论的问题
+  - 新增通过 `DoctorPatientRelation` 验证医生权限
+  - 权限逻辑：
+    - `visible_to_doctors=True`: 所有认证医生可评论
+    - `visible_to_doctors=False`: 仅 @提及的医生可评论
+
+#### 🏛️ 病例分享隐私逻辑澄清 (Case Sharing Privacy Logic Clarification)
+- **分享与@提及关系明确** Clarified sharing vs @mention relationship
+  - 仅 "分享给医生": 所有认证医生可见
+  - 仅 @医生: 仅被 @提及的医生可见
+  - "分享" + @医生: 所有医生可见，@医生收到通知
+  - @提及仅发送通知，不限制可见性范围
+
+#### 🗑️ 遗留知识库清理 (Legacy Knowledge Base Cleanup)
+- **删除旧模块化知识库** Removed legacy modular KB
+  - 删除 `backend/data/knowledge_bases/diseases/` 目录 (164KB)
+  - 统一使用 `unified/` 目录作为唯一知识库来源
+  - 简化架构，减少维护复杂度
+
+#### 🚀 部署稳定性改进 (Deployment Stability Improvements)
+- **PostgreSQL 健康检查优化** PostgreSQL Health Check Enhancement
+  - 增加 `start_period: 60s` 给数据库初始化时间
+  - 增加重试次数到 10 次
+  - 解决全新部署时健康检查失败问题
+
+#### 🐳 Docker 清理脚本增强 (Docker Cleanup Script Enhancement)
+- **跨版本 Docker Compose 兼容** Cross-version Docker Compose compatibility
+  - 自动检测 `docker-compose` (v1) 或 `docker compose` (v2)
+  - 新增 `-y` / `--yes` 参数支持非交互式自动确认
+  - 添加 10 秒超时保护，防止自动化环境挂起
+
+### 新增功能 Added
+- `scripts/cleanup-docker.sh` - Docker 数据清理工具
+- `start_period` 配置 - PostgreSQL 健康检查启动宽限期
+- 自动确认模式 - 清理脚本支持 `-y` 参数
+
+### 修复 Fixed
+- AI 诊断请求类型枚举错误导致数据未保存
+- 医生评论权限逻辑问题
+- PostgreSQL 首次部署健康检查失败
+- Docker Compose 命令兼容性问题 (Ubuntu 24.04)
+- 清理脚本在自动化环境超时问题
+
+### 变更 Changed
+- 删除 `backend/data/knowledge_bases/diseases/` 目录
+- 更新 `docker-compose.yml` 健康检查配置
+- 更新 `.gitignore` 排除遗留知识库路径
+- 优化 `scripts/cleanup-docker.sh` 交互逻辑
+
+### 技术细节 Technical Details
+
+#### 后端变更
+- `backend/app/services/ai_service.py` - Line 694: 修复 request_type
+- `backend/app/api/api_v1/endpoints/doctor.py` - Lines 1193-1243: 修复评论权限
+- `backend/app/api/api_v1/endpoints/ai.py` - Lines 113-202: 澄清分享逻辑
+- `docker-compose.yml` - 健康检查配置优化
+- `docker-compose.prod.yml` - 健康检查配置优化
+
+#### 文档更新
+- `README.md` - 更新项目结构说明
+- `CHANGELOG.md` - 添加 v2.0.3 更新记录
+
+---
+
 ## [2.0.0] - 2026-02-09
 
 ### 主要更新 Highlights | Major Updates
@@ -49,6 +176,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `docker-compose.yml` 添加 `restart: always` 策略
 - 管理后台使用 `psutil` 获取真实系统指标
 - 医生认证流程优化
+
+---
+
+## [2.0.1] - 2026-02-12
+
+### 主要更新 Highlights | Major Updates
+
+#### 📚 统一知识库架构 (Unified Knowledge Base Architecture)
+- **扁平化存储结构** Flat Storage Structure
+  - 所有文档统一存储在 `unified/` 目录 | All documents stored in unified/ directory
+  - 移除疾病分类限制 | Removed disease category restrictions
+  - 新增 `UnifiedKnowledgeLoader` 服务 | Added UnifiedKnowledgeLoader service
+  - 自动文档分类和标签提取 | Auto document categorization and tag extraction
+
+#### ⚙️ 动态配置系统 (Dynamic Configuration System)
+- **MinerU Token 动态配置** Dynamic MinerU Token
+  - 新增 `DynamicConfigService` 实现运行时配置读取
+  - Admin 修改后立即生效，无需重启服务
+  - 支持 URL 自动校正 (mineru.com → mineru.net)
+
+#### 🔧 向量化修复 (Vectorization Fixes)
+- **source_type 枚举修复** Added 'unified_kb' to enum
+- **重复上传优化** 自动删除旧版本 chunks
+- **异步操作修复** 解决 greenlet_spawn 错误
+
+### 新增功能 Added
+- `UnifiedKnowledgeLoader` - 统一知识库加载服务
+- `DynamicConfigService` - 动态配置服务
+- `DocumentTasks` - 后台文档处理任务
+- 知识库文档自动分类和标签提取
+
+### 修复 Fixed
+- MinerU Token 动态配置不生效问题
+- 向量化失败 (source_type 枚举缺失)
+- 重复上传时旧 chunks 未删除
+- 异步文件操作 greenlet 错误
+- 知识库 API 端点 unified 目录支持
+
+### 变更 Changed
+- 知识库目录结构: diseases/ → unified/
+- MinerUService 返回格式改为 dict
+- 文档上传流程使用真实向量化
+- 更新删除端点支持 unified 结构
+
+### 技术细节 Technical Details
+
+#### 后端变更
+- `app/services/unified_kb_service.py` - 统一知识库服务
+- `app/services/dynamic_config_service.py` - 动态配置服务
+- `app/services/document_tasks.py` - 后台文档处理
+- `app/api/api_v1/endpoints/admin.py` - 知识库 API 更新
+
+#### 数据库变更
+- 更新 `source_type` enum: 添加 'unified_kb'
+- 支持 `knowledge_base_chunks` 按标题模糊删除
 
 ---
 
@@ -221,6 +403,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | 版本 | 日期 | 主要更新 |
 |------|------|----------|
+| 2.0.7 | 2026-02-16 | 文档重构合并、新增故障排除指南、项目清理 |
+| 2.0.3 | 2026-02-16 | AI诊断修复、隐私逻辑优化、部署改进、遗留KB清理 |
+| 2.0.1 | 2026-02-12 | 统一知识库架构、动态配置、向量化修复 |
 | 2.0.0 | 2026-02-09 | 医患双向沟通、系统稳定性增强、Bug修复 |
 | 1.0.3 | 2026-02-04 | 一键部署脚本、AI语言支持、Bug修复 |
 | 1.0.2 | 2025-02-01 | 流式AI诊断、文档处理、知识库 |
