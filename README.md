@@ -347,47 +347,68 @@ MediCareAI/
 │   │   │       │   ├── documents.py      # File Upload - 文件上传
 │   │   │       │   ├── admin.py          # Admin System - 管理员系统
 │   │   │       │   ├── sharing.py        # Data Sharing - 数据分享
-│   │   │       │   └── doctor.py         # Doctor Platform - 医生平台
+│   │   │       │   ├── doctor.py         # Doctor Platform - 医生平台
+│   │   │       │   └── vector_embedding.py  # Vector Operations - 向量操作
 │   │   │       └── api.py
 │   │   ├── 📁 core/              # Core Config - 核心配置
-│   │   ├── 📁 models/            # Database Models - 数据库模型 (18 tables)
+│   │   ├── 📁 models/            # Database Models - 数据库模型 (22 tables)
 │   │   ├── 📁 schemas/           # Pydantic Schemas - 数据验证模式
 │   │   ├── 📁 services/          # Business Logic - 业务逻辑层
 │   │   │   ├── ai_service.py           # AI Diagnosis - AI 诊断
-│   │   │   ├── vector_embedding_service.py  # Vector Embeddings - 向量嵌入
+│   │   │   ├── ai_model_config_service.py  # AI Model Management - AI 模型管理
 │   │   │   ├── kb_vectorization_service.py  # KB Vectorization - 知识库向量化
-│   │   │   ├── smart_rag_selector.py   # Smart RAG - 智能检索
+│   │   │   ├── unified_kb_service.py   # Unified KB - 统一知识库
+│   │   │   ├── generic_rag_selector.py # Smart RAG - 智能检索
 │   │   │   ├── pii_cleaner_service.py  # PII Cleaning - PII 清洗
 │   │   │   └── oss_service.py          # Alibaba Cloud OSS - 阿里云 OSS
+│   │   ├── 📁 db/                # Database - 数据库
+│   │   ├── 📁 utils/             # Utilities - 工具函数
 │   │   └── main.py               # Application Entry - 应用入口
 │   ├── 📁 data/
-│   │   └── 📁 knowledge_bases/   # Medical Guidelines - 医疗指南
-│   └── Dockerfile                # Backend Container - 后端容器
+│   │   └── 📁 knowledge_bases/   # Knowledge Base - 知识库
+│   │       ├── 📁 unified/       # Unified KB - 统一知识库
+│   │       └── 📁 active/        # Active Configs - 激活配置
+│   ├── 📁 tests/                 # Tests - 测试
+│   ├── 📁 uploads/               # Uploads - 上传文件
+│   ├── Dockerfile                # Backend Container - 后端容器
+│   └── entrypoint.sh             # Entry Script - 启动脚本
 ├── 📁 frontend/                  # Frontend - 前端 (Three Platforms)
-│   ├── 📁 patient/               # Patient Platform - 患者端
-│   │   ├── index.html            # Homepage - 首页
-│   │   ├── login.html            # Login - 登录
-│   │   ├── register.html         # Registration - 注册
-│   │   ├── symptom-submit.html   # AI Diagnosis - AI 诊断
-│   │   ├── medical-records.html  # Medical History - 诊疗记录
-│   │   └── user-profile.html     # User Profile - 个人中心
-│   ├── 📁 doctor/                # Doctor Platform - 医生端
-│   │   ├── doctor-dashboard.html      # Doctor Dashboard - 医生仪表板
-│   │   ├── doctor-mentions.html       # @My Cases - @我的病例
-│   │   ├── doctor-case-detail.html    # Case Detail - 病例详情
-│   │   └── doctor-profile.html        # Doctor Profile - 医生档案
-│   ├── 📁 admin/                 # Admin Platform - 管理员端
-│   │   ├── admin-dashboard.html       # Admin Dashboard - 管理仪表板
-│   │   ├── admin-doctors.html         # Doctor Verification - 医生认证
-│   │   ├── admin-knowledge-base.html  # Knowledge Base - 知识库管理
-│   │   ├── admin-ai-models.html       # AI Models - AI 模型配置
-│   │   └── admin-logs.html            # Audit Logs - 审计日志
+│   ├── index.html                # Patient Homepage - 患者首页
+│   ├── login.html                # Patient Login - 患者登录
+│   ├── register.html             # Patient Register - 患者注册
+│   ├── symptom-submit.html       # AI Diagnosis - AI 诊断
+│   ├── medical-records.html      # Medical History - 诊疗记录
+│   ├── user-profile.html         # User Profile - 个人中心
+│   ├── doctor-dashboard.html     # Doctor Dashboard - 医生仪表板
+│   ├── doctor-mentions.html      # @My Cases - @我的病例
+│   ├── doctor-case-detail.html   # Case Detail - 病例详情
+│   ├── doctor-login.html         # Doctor Login - 医生登录
+│   ├── doctor-register.html      # Doctor Register - 医生注册
+│   ├── doctor-profile.html       # Doctor Profile - 医生档案
+│   ├── admin-dashboard.html      # Admin Dashboard - 管理仪表板
+│   ├── admin-doctors.html        # Doctor Verification - 医生认证
+│   ├── admin-knowledge-base.html # Knowledge Base - 知识库管理
+│   ├── admin-ai-models.html      # AI Models - AI 模型配置
+│   ├── admin-logs.html           # Audit Logs - 审计日志
+│   ├── admin-login.html          # Admin Login - 管理员登录
+│   ├── platform-select.html      # Platform Selector - 平台选择
+│   ├── server.py                 # Dev Server - 开发服务器
+│   ├── 📁 src/                   # Source Code - 源代码
+│   │   ├── 📁 components/        # Components - 组件
+│   │   ├── 📁 contexts/          # Contexts - 上下文
+│   │   ├── 📁 pages/             # Pages - 页面
+│   │   ├── 📁 services/          # Services - 服务
+│   │   └── 📁 types/             # Types - 类型定义
+│   ├── 📁 public/                # Public Assets - 静态资源
 │   └── Dockerfile                # Frontend Container - 前端容器
 ├── 📁 docker/                    # Docker Config - Docker 配置
 │   ├── 📁 nginx/                 # Nginx Configuration - Nginx 配置
 │   └── 📁 postgres/              # PostgreSQL Setup - PostgreSQL 设置
 ├── 📁 docs/                      # Documentation - 文档
-│   ├── RELEASE_v2.0.3.mdx        # Latest Release Notes - 最新版本发布说明
+│   ├── RELEASE_v2.0.5.mdx        # Latest Release Notes - 最新版本发布说明
+│   ├── RELEASE_v2.0.4.mdx        # Release v2.0.4
+│   ├── RELEASE_v2.0.3.mdx        # Release v2.0.3
+│   ├── RELEASE_v2.0.0.mdx        # Release v2.0.0
 │   ├── DEPLOYMENT.mdx            # Deployment Guide - 部署指南
 │   ├── ARCHITECTURE.mdx          # System Design - 架构设计
 │   ├── API.mdx                   # API Reference - API 参考
@@ -397,10 +418,15 @@ MediCareAI/
 ├── 📁 scripts/                   # Utility Scripts - 实用脚本
 │   ├── backup.sh                 # Backup Script - 备份脚本
 │   ├── test_integration.sh       # Integration Test - 集成测试
-│   └── test_login.sh             # Login Test - 登录测试
+│   ├── test_login.sh             # Login Test - 登录测试
+│   └── cleanup-docker.sh         # Docker Cleanup - Docker 清理
 ├── docker-compose.yml            # Docker Compose Config - 编排配置
+├── docker-compose.prod.yml       # Production Config - 生产配置
 ├── .env.example                  # Environment Template - 环境模板
 ├── README.md                     # This File - 本文件
+├── CHANGELOG.md                  # Changelog - 变更日志
+├── CONTRIBUTING.md               # Contributing - 贡献指南
+├── CODE_OF_CONDUCT.md            # Code of Conduct - 行为准则
 └── LICENSE                       # MIT License - MIT 许可证
 ```
 
@@ -448,8 +474,9 @@ See [`.env.example`](.env.example) for full configuration template.
 - **[🏗️ ARCHITECTURE.mdx](docs/ARCHITECTURE.mdx)** - System architecture & design / 系统架构与设计
 - **[🔌 API.mdx](docs/API.mdx)** - Complete API reference / 完整 API 参考
 - **[🤝 CONTRIBUTING.md](CONTRIBUTING.md)** - Development guidelines / 开发指南
-- **[📦 RELEASE_v2.0.3.mdx](docs/RELEASE_v2.0.3.mdx)** - Latest release notes / 最新版本发布说明
-- **[📦 RELEASE_v2.0.0.mdx](docs/RELEASE_v2.0.0.mdx)** - v2.0.0 Release notes / v2.0.0 版本发布说明
+- **[📦 RELEASE_v2.0.5.mdx](docs/RELEASE_v2.0.5.mdx)** - Latest release notes / 最新版本发布说明
+- **[📦 RELEASE_v2.0.4.mdx](docs/RELEASE_v2.0.4.mdx)** - v2.0.4 Release notes / v2.0.4 版本发布说明
+- **[📦 RELEASE_v2.0.3.mdx](docs/RELEASE_v2.0.3.mdx)** - v2.0.3 Release notes / v2.0.3 版本发布说明
 - **[🤖 AI_ASSISTANT.mdx](docs/AI_ASSISTANT.mdx)** - AI assistant context / AI 助手上下文
 
 ### API Endpoints Overview | API 端点概览
