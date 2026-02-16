@@ -15,6 +15,17 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# 检测可用的 docker compose 命令
+if command -v docker-compose &> /dev/null; then
+    DOCKER_COMPOSE="docker-compose"
+elif docker compose version &> /dev/null; then
+    DOCKER_COMPOSE="docker compose"
+else
+    echo -e "${RED}错误: 未找到 docker-compose 或 docker compose 命令${NC}"
+    echo "请确保 Docker 和 Docker Compose 已正确安装"
+    exit 1
+fi
+
 # 检查是否在项目目录
 if [ ! -f "docker-compose.yml" ]; then
     echo -e "${RED}错误: 请在 MediCareAI 项目目录中运行此脚本${NC}"
@@ -41,7 +52,7 @@ echo ""
 echo "========================================"
 echo "步骤 1/4: 停止并删除容器"
 echo "========================================"
-docker-compose down --remove-orphans
+$DOCKER_COMPOSE down --remove-orphans
 echo -e "${GREEN}✓ 容器已停止并删除${NC}"
 
 echo ""
@@ -63,7 +74,7 @@ echo -n "是否删除构建的镜像? [y/N]: "
 read -r response
 
 if [[ "$response" =~ ^[Yy]$ ]]; then
-    docker-compose down --rmi all 2>/dev/null || true
+    $DOCKER_COMPOSE down --rmi all 2>/dev/null || true
     # 删除 dangling 镜像
     docker image prune -f
     echo -e "${GREEN}✓ 镜像已删除${NC}"
@@ -84,7 +95,7 @@ echo "清理完成！"
 echo "========================================"
 echo ""
 echo "系统已恢复干净状态，可以重新部署:"
-echo "  docker-compose up -d"
+echo "  $DOCKER_COMPOSE up -d"
 echo ""
 echo -e "${YELLOW}注意: 数据库已完全重置，需要重新初始化${NC}"
 echo "  - 默认管理员账号将重新创建"
