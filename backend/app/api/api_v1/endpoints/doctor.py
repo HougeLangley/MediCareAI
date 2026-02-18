@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Background
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, or_, desc
+from sqlalchemy.orm import selectinload
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 from datetime import datetime, date, timedelta
@@ -22,7 +23,7 @@ import logging
 from app.db.database import get_db
 from app.models.models import (
     User, DoctorVerification, SharedMedicalCase, DataSharingConsent, DoctorPatientRelation,
-    MedicalCase, Disease, MedicalDocument, AIFeedback
+    MedicalCase, Disease, MedicalDocument, AIFeedback, ChronicDisease, PatientChronicCondition
 )
 from app.core.deps import get_current_active_user, require_doctor, require_verified_doctor
 from app.schemas.user import UserResponse
@@ -43,6 +44,14 @@ class AnonymousPatientProfile(BaseModel):
     city_tier: Optional[str] = None
     city_environment: Optional[str] = None
 
+class ChronicDiseaseSummary(BaseModel):
+    """Chronic disease summary for case list / 病例列表中的慢性病摘要"""
+    id: uuid.UUID
+    icd10_code: str
+    icd10_name: str
+    disease_type: str
+    common_names: Optional[List[str]] = None
+
 class SharedCaseResponse(BaseModel):
     """Shared medical case response / 分享病例响应"""
     id: uuid.UUID
@@ -53,6 +62,7 @@ class SharedCaseResponse(BaseModel):
     disease_category: Optional[str] = None
     created_at: datetime
     view_count: int
+    patient_chronic_diseases: Optional[List[ChronicDiseaseSummary]] = None
     
     class Config:
         from_attributes = True
@@ -285,6 +295,71 @@ async def get_verification_status(
 # Helper Functions / 辅助函数
 # =============================================================================
 
+async def check_export_permission(
+    db: AsyncSession,
+    doctor_id: uuid.UUID,
+    case_id: uuid.UUID
+) -> bool:
+    """
+    Check if a doctor can export a specific case for research.
+    检查医生是否可以导出特定病例用于科研。
+    
+    导出权限规则：
+    1. 公开的病例（visible_to_doctors=True）：所有医生可导出
+    2. 被@给该医生的非公开病例：只有该医生可导出
+    3. 未被@且非公开的病例：不可导出
+    
+    Returns:
+        bool: True if doctor can export this case, False otherwise
+    """
+    from sqlalchemy import select
+    
+    # Get case details with patient info
+    query = select(SharedMedicalCase, MedicalCase).join(
+        MedicalCase, SharedMedicalCase.original_case_id == MedicalCase.id
+    ).where(SharedMedicalCase.id == case_id)
+    
+    result = await db.execute(query)
+    case_data = result.first()
+    
+    if not case_data:
+        return False
+    
+    shared_case, medical_case = case_data
+    
+    # Rule 1 & 4: Public cases can be exported by any doctor
+    # 公开病例可以被所有医生导出
+    if shared_case.visible_to_doctors:
+        return True
+    
+    # Rule 2 & 3: For non-public cases, check if doctor was @mentioned
+    # 对于非公开病例，检查医生是否被@提及
+    relation_query = select(DoctorPatientRelation).where(
+        and_(
+            DoctorPatientRelation.patient_id == medical_case.patient_id,
+            DoctorPatientRelation.doctor_id == doctor_id,
+            DoctorPatientRelation.initiated_by == 'patient_at',
+            DoctorPatientRelation.status.in_(['pending', 'active'])
+        )
+    )
+    
+    relation_result = await db.execute(relation_query)
+    relation = relation_result.scalar_one_or_none()
+    
+    # If no relation exists, doctor cannot export
+    if not relation:
+        return False
+    
+    # Check if this specific case is in the shared_case_ids
+    # 检查该具体病例是否在共享病例列表中
+    case_id_str = str(case_id)
+    shared_case_ids = relation.shared_case_ids or []
+    
+    # If doctor was @mentioned by this patient AND case is shared, they can export
+    # 如果医生被该患者@提及且病例被共享给该医生，则可以导出
+    return case_id_str in shared_case_ids
+
+
 async def get_doctor_accessible_cases(
     db: AsyncSession,
     doctor_id: uuid.UUID,
@@ -301,8 +376,8 @@ async def get_doctor_accessible_cases(
     from sqlalchemy import or_
 
     if case_type == "mentioned":
-        # Find patients who @mentioned this doctor
-        relation_query = select(DoctorPatientRelation.patient_id).where(
+        # 获取医生的所有@提及关系
+        relation_query = select(DoctorPatientRelation).where(
             and_(
                 DoctorPatientRelation.doctor_id == doctor_id,
                 DoctorPatientRelation.initiated_by == 'patient_at',
@@ -310,17 +385,24 @@ async def get_doctor_accessible_cases(
             )
         )
         result = await db.execute(relation_query)
-        patient_ids = [row[0] for row in result.all()]
+        relations = result.scalars().all()
 
-        if not patient_ids:
+        if not relations:
             return []
 
-        # Only cases from patients who @mentioned this doctor
-        # 包括 visible_to_doctors=False 的@提及病例
-        query = select(SharedMedicalCase).join(
-            MedicalCase, SharedMedicalCase.original_case_id == MedicalCase.id
-        ).where(
-            MedicalCase.patient_id.in_(patient_ids)
+        # 收集所有共享的病例ID
+        # 只返回明确共享给该医生的病例，而不是该患者的所有病例
+        shared_case_ids = []
+        for relation in relations:
+            if relation.shared_case_ids:
+                shared_case_ids.extend(relation.shared_case_ids)
+
+        if not shared_case_ids:
+            return []
+
+        # 只返回明确共享给该医生的病例
+        query = select(SharedMedicalCase).where(
+            SharedMedicalCase.id.in_(shared_case_ids)
         )
     elif case_type == "public":
         # Public platform cases (visible_for_research=True)
@@ -332,10 +414,10 @@ async def get_doctor_accessible_cases(
     else:
         # "all" - 返回医生有权查看的所有病例
         # 1. 公开共享的病例 (visible_to_doctors=True)
-        # 2. @提及该医生的病例 (通过DoctorPatientRelation关联)
+        # 2. @提及该医生的特定病例 (通过DoctorPatientRelation.shared_case_ids关联)
         
-        # Find patients who @mentioned this doctor
-        relation_query = select(DoctorPatientRelation.patient_id).where(
+        # 获取该医生的所有@提及关系，收集明确共享的病例ID
+        relation_query = select(DoctorPatientRelation).where(
             and_(
                 DoctorPatientRelation.doctor_id == doctor_id,
                 DoctorPatientRelation.initiated_by == 'patient_at',
@@ -343,26 +425,25 @@ async def get_doctor_accessible_cases(
             )
         )
         result = await db.execute(relation_query)
-        patient_ids = [row[0] for row in result.all()]
+        relations = result.scalars().all()
+        
+        # 收集明确共享给该医生的病例ID
+        shared_case_ids = []
+        for relation in relations:
+            if relation.shared_case_ids:
+                shared_case_ids.extend(relation.shared_case_ids)
 
-        # Query: visible_to_doctors=True OR (patient in mentioned list AND visible_to_doctors=False)
-        if patient_ids:
-            query = select(SharedMedicalCase).join(
-                MedicalCase, SharedMedicalCase.original_case_id == MedicalCase.id
-            ).where(
+        # Query: visible_to_doctors=True OR (case_id in shared_case_ids)
+        if shared_case_ids:
+            query = select(SharedMedicalCase).where(
                 or_(
                     SharedMedicalCase.visible_to_doctors == True,
-                    and_(
-                        MedicalCase.patient_id.in_(patient_ids),
-                        SharedMedicalCase.visible_to_doctors == False
-                    )
+                    SharedMedicalCase.id.in_(shared_case_ids)
                 )
             )
         else:
             # 没有被@提及，只能看到公开共享的病例
-            query = select(SharedMedicalCase).join(
-                MedicalCase, SharedMedicalCase.original_case_id == MedicalCase.id
-            ).where(
+            query = select(SharedMedicalCase).where(
                 SharedMedicalCase.visible_to_doctors == True
             )
 
@@ -682,7 +763,9 @@ async def get_cases(
         return []
 
     # Build query with filters
-    query = select(SharedMedicalCase).where(
+    query = select(SharedMedicalCase).options(
+        selectinload(SharedMedicalCase.original_case).selectinload(MedicalCase.disease)
+    ).where(
         SharedMedicalCase.id.in_([case.id for case in accessible_cases])
     )
     
@@ -699,11 +782,63 @@ async def get_cases(
     result = await db.execute(query)
     cases = result.scalars().all()
     
-    # Log access for each case
+    # Load chronic diseases for each case
+    case_responses = []
     for case in cases:
+        # Log access
         await log_case_access(db, case.id, current_user.id)
+        
+        # Get patient's chronic diseases through original_case
+        chronic_diseases = []
+        if case.original_case_id:
+            # Get the medical case to find patient_id
+            medical_case_result = await db.execute(
+                select(MedicalCase).where(MedicalCase.id == case.original_case_id)
+            )
+            medical_case = medical_case_result.scalar_one_or_none()
+            
+            if medical_case and medical_case.patient_id:
+                # Get patient's active chronic diseases
+                chronic_result = await db.execute(
+                    select(PatientChronicCondition, ChronicDisease)
+                    .join(ChronicDisease, PatientChronicCondition.disease_id == ChronicDisease.id)
+                    .where(
+                        and_(
+                            PatientChronicCondition.patient_id == medical_case.patient_id,
+                            PatientChronicCondition.is_active == True
+                        )
+                    )
+                )
+                
+                for condition, disease in chronic_result.all():
+                    chronic_diseases.append({
+                        'id': disease.id,
+                        'icd10_code': disease.icd10_code,
+                        'icd10_name': disease.icd10_name,
+                        'disease_type': disease.disease_type,
+                        'common_names': disease.common_names
+                    })
+        
+        # Build response manually with chronic diseases
+        # Get disease_category from original_case.disease if available
+        disease_category = None
+        if case.original_case and case.original_case.disease:
+            disease_category = case.original_case.disease.category
+        
+        case_data = {
+            'id': case.id,
+            'original_case_id': case.original_case_id,
+            'anonymous_patient_profile': case.anonymous_patient_profile,
+            'anonymized_symptoms': case.anonymized_symptoms,
+            'anonymized_diagnosis': case.anonymized_diagnosis,
+            'disease_category': disease_category,
+            'created_at': case.created_at,
+            'view_count': case.view_count,
+            'patient_chronic_diseases': chronic_diseases if chronic_diseases else None
+        }
+        case_responses.append(SharedCaseResponse(**case_data))
     
-    return [SharedCaseResponse.model_validate(case) for case in cases]
+    return case_responses
 
 
 @router.get("/cases/{case_id}", response_model=CaseDetailResponse)
@@ -720,8 +855,13 @@ async def get_case_detail(
     验证医生是否有权限查看该病例
     """
     
-    # Get the shared case
-    case = await db.get(SharedMedicalCase, case_id)
+    # Get the shared case with eager loading of relationships
+    case_query = select(SharedMedicalCase).options(
+        selectinload(SharedMedicalCase.original_case).selectinload(MedicalCase.disease)
+    ).where(SharedMedicalCase.id == case_id)
+    case_result = await db.execute(case_query)
+    case = case_result.scalar_one_or_none()
+    
     if not case:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -768,11 +908,55 @@ async def get_case_detail(
     ai_feedbacks_result = await db.execute(ai_feedbacks_query)
     ai_feedbacks = ai_feedbacks_result.scalars().all()
 
+    # Get patient's chronic diseases
+    chronic_diseases = []
+    if case.original_case_id:
+        # Get the medical case to find patient_id
+        medical_case_result = await db.execute(
+            select(MedicalCase).where(MedicalCase.id == case.original_case_id)
+        )
+        medical_case = medical_case_result.scalar_one_or_none()
+        
+        if medical_case and medical_case.patient_id:
+            # Get patient's active chronic diseases
+            chronic_result = await db.execute(
+                select(PatientChronicCondition, ChronicDisease)
+                .join(ChronicDisease, PatientChronicCondition.disease_id == ChronicDisease.id)
+                .where(
+                    and_(
+                        PatientChronicCondition.patient_id == medical_case.patient_id,
+                        PatientChronicCondition.is_active == True
+                    )
+                )
+            )
+            
+            for condition, disease in chronic_result.all():
+                chronic_diseases.append({
+                    'id': disease.id,
+                    'icd10_code': disease.icd10_code,
+                    'icd10_name': disease.icd10_name,
+                    'disease_type': disease.disease_type,
+                    'common_names': disease.common_names
+                })
+
     # Log this access
     await log_case_access(db, case_id, current_user.id)
 
+    # Build case response with chronic diseases
+    case_dict = {
+        'id': case.id,
+        'original_case_id': case.original_case_id,
+        'anonymous_patient_profile': case.anonymous_patient_profile,
+        'anonymized_symptoms': case.anonymized_symptoms,
+        'anonymized_diagnosis': case.anonymized_diagnosis,
+        'disease_category': case.original_case.disease.category if case.original_case and case.original_case.disease else None,
+        'created_at': case.created_at,
+        'view_count': case.view_count,
+        'patient_chronic_diseases': chronic_diseases if chronic_diseases else None
+    }
+
     return CaseDetailResponse(
-        case=SharedCaseResponse.model_validate(case),
+        case=SharedCaseResponse(**case_dict),
         documents=document_responses,
         ai_feedbacks=[{
             "feedback_type": af.feedback_type,
@@ -882,15 +1066,14 @@ async def export_cases(
             detail="case_ids cannot be empty"
         )
     
-    # Verify access to all requested cases
-    accessible_cases = await get_doctor_accessible_cases(db, current_user.id, "all")
-    accessible_ids = [c.id for c in accessible_cases]
-    
+    # Verify export permission for all requested cases
+    # 使用专门的导出权限检查
     for case_id in export_request.case_ids:
-        if case_id not in accessible_ids:
+        has_permission = await check_export_permission(db, current_user.id, case_id)
+        if not has_permission:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Access denied to case {case_id}"
+                detail=f"无权限导出病例 {case_id}。只能导出公开病例或@提及您的病例。"
             )
     
     # Get cases to export with original case data
@@ -1129,12 +1312,15 @@ async def mark_mention_as_read(
     将关系状态更新为'active'
     """
     
-    # Get the doctor-patient relation
-    relation = await db.get(DoctorPatientRelation, mention_id)
+    # Get the doctor-patient relation with eager loading
+    relation_query = select(DoctorPatientRelation).where(DoctorPatientRelation.id == mention_id)
+    relation_result = await db.execute(relation_query)
+    relation = relation_result.scalar_one_or_none()
+    
     if not relation:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Mention not found"
+            detail="Mention not found | 提及记录未找到"
         )
     
     # Verify this mention is for the current doctor
@@ -1205,12 +1391,17 @@ async def create_comment(
     from app.models.models import DoctorCaseComment, DoctorPatientRelation
     from sqlalchemy import and_
     
-    # Verify case exists
-    case = await db.get(SharedMedicalCase, case_id)
+    # Verify case exists with eager loading
+    case_query = select(SharedMedicalCase).options(
+        selectinload(SharedMedicalCase.original_case)
+    ).where(SharedMedicalCase.id == case_id)
+    case_result = await db.execute(case_query)
+    case = case_result.scalar_one_or_none()
+    
     if not case:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Case not found"
+            detail="Case not found | 病例未找到"
         )
     
     # Check visibility permission
@@ -1219,8 +1410,7 @@ async def create_comment(
     if not case.visible_to_doctors:
         # Check if this doctor was @mentioned by the patient
         # Get the patient_id from the original medical case
-        from app.models.models import MedicalCase
-        medical_case = await db.get(MedicalCase, case.original_case_id)
+        medical_case = case.original_case
         if medical_case:
             relation_query = select(DoctorPatientRelation).where(
                 and_(

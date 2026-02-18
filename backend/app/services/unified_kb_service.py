@@ -190,6 +190,9 @@ class UnifiedKnowledgeLoader:
     
     def list_documents(self, category: str = None) -> List[Dict]:
         """列出所有文档"""
+        # 每次调用时重新加载元数据，确保获取最新数据
+        self._load_or_create_metadata()
+        
         docs = self._metadata.get('documents', [])
         
         if category:
@@ -249,7 +252,7 @@ class UnifiedKnowledgeLoader:
                 docs.append(doc)
         return docs
     
-    def add_document(self, filename: str, content: str, 
+    def add_document(self, filename: str, content: str,
                      title: str = None, category: str = None,
                      tags: List[str] = None, source: str = "") -> bool:
         """
@@ -268,6 +271,9 @@ class UnifiedKnowledgeLoader:
                 category = self._infer_category(filename, content)
             if not tags:
                 tags = self._extract_tags(filename, content)
+            
+            # 先重新加载元数据，确保获取其他进程的最新更改
+            self._load_or_create_metadata()
             
             # 添加到元数据
             new_doc = {

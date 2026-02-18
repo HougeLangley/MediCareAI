@@ -1,0 +1,112 @@
+{
+  "dashboard": {
+    "title": "MediCareAI Monitoring Dashboard",
+    "tags": ["medicareai", "monitoring"],
+    "timezone": "Asia/Shanghai",
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "API Request Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total[5m])",
+            "legendFormat": "{{method}} {{endpoint}}"
+          }
+        ],
+        "xaxis": { "mode": "time" },
+        "yaxes": [
+          { "label": "Requests/sec" }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+      },
+      {
+        "id": 2,
+        "title": "API Response Time (95th percentile)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "{{method}} {{endpoint}}"
+          }
+        ],
+        "yaxes": [
+          { "label": "Seconds", "format": "s" }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+      },
+      {
+        "id": 3,
+        "title": "HTTP Status Codes",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum by (status_code) (http_requests_total)",
+            "legendFormat": "{{status_code}}"
+          }
+        ],
+        "gridPos": { "h": 4, "w": 8, "x": 0, "y": 8 }
+      },
+      {
+        "id": 4,
+        "title": "AI Requests",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(ai_requests_total)",
+            "legendFormat": "Total"
+          }
+        ],
+        "gridPos": { "h": 4, "w": 8, "x": 8, "y": 8 }
+      },
+      {
+        "id": 5,
+        "title": "Active Users",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "active_users_total",
+            "legendFormat": "Users"
+          }
+        ],
+        "gridPos": { "h": 4, "w": 8, "x": 16, "y": 8 }
+      },
+      {
+        "id": 6,
+        "title": "AI Request Duration",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(ai_request_duration_seconds_sum[5m]) / rate(ai_request_duration_seconds_count[5m])",
+            "legendFormat": "Average Duration"
+          }
+        ],
+        "yaxes": [
+          { "label": "Seconds", "format": "s" }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 }
+      },
+      {
+        "id": 7,
+        "title": "Database Query Duration",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(db_query_duration_seconds_sum[5m]) / rate(db_query_duration_seconds_count[5m])",
+            "legendFormat": "{{operation}}"
+          }
+        ],
+        "yaxes": [
+          { "label": "Seconds", "format": "s" }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "schemaVersion": 16
+  }
+}

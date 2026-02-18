@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
 from app.api.api_v1.api import api_router
+from app.core.monitoring import PrometheusMiddleware, set_app_info
 
 logging.basicConfig(
     level=logging.INFO,
@@ -42,6 +43,12 @@ app.add_middleware(
     TrustedHostMiddleware,
     allowed_hosts=["*"],  # In production, specify actual domains / 生产环境应指定实际域名
 )
+
+# Add Prometheus monitoring middleware
+app.add_middleware(PrometheusMiddleware)
+
+# Set application info for metrics
+set_app_info(version="1.0.0", environment=os.getenv("ENV", "production"))
 
 
 @app.middleware("http")

@@ -1102,30 +1102,28 @@
                 <!-- @医生 -->
                 <div id="shareDoctorPanel" class="share-panel" style="display: none;">
                     <div class="doctor-search-section">
-                        <label>搜索医生</label>
+                        <label>搜索医生（可添加多位）</label>
                         <div class="doctor-search-input">
                             <input type="text" id="doctorSearchInput" placeholder="输入医生姓名、医院或专业领域" oninput="searchDoctors()">
                             <button class="search-btn" onclick="searchDoctors()">🔍</button>
                         </div>
-                        <small style="color: #666; display: block; margin-top: 5px;">显示的都是已认证医生，只展示昵称，不暴露真实姓名</small>
+                        <small style="color: #666; display: block; margin-top: 5px;">显示的都是已认证医生，只展示昵称。点击选择多位医生，再次点击取消选择。</small>
                     </div>
-                    
+
                     <div id="doctorSearchResults" class="doctor-results">
                         <div class="doctor-results-empty">输入关键词搜索医生...</div>
                     </div>
-                    
+
                     <div id="selectedDoctorInfo" class="selected-doctor" style="display: none;">
                         <h4>已选择医生</h4>
-                        <div class="selected-doctor-card">
-                            <div class="doctor-name" id="selectedDoctorName"></div>
-                            <div class="doctor-info" id="selectedDoctorInfo"></div>
-                        </div>
+                        <div id="selectedDoctorList"></div>
+                        <button class="btn-secondary" onclick="clearSelectedDoctors()" style="margin-top: 10px;">清除全部</button>
                     </div>
-                    
+
                     <div class="consent-section">
                         <label>分享授权</label>
                         <div class="consent-text">
-                            <p>您即将将此病例分享给指定的医生。分享内容将自动脱敏处理，隐藏您的姓名、身份证号、手机号等敏感信息。</p>
+                            <p>您即将将此病例分享给选定的医生。分享内容将自动脱敏处理，隐藏您的姓名、身份证号、手机号等敏感信息。</p>
                             <p>医生将可以查看：症状描述、AI诊断结果、检查资料（已脱敏）</p>
                         </div>
                         <label class="consent-checkbox">
@@ -1694,6 +1692,8 @@
         // 关闭分享模态框
         function closeShareModal() {
             document.getElementById('shareModal').classList.remove('show');
+            // 清除已选择的医生
+            clearSelectedDoctors();
         }
 
         // 更新分享链接
@@ -1755,16 +1755,21 @@
         }
 
         // 搜索医生
+        // 支持同时@多个医生
+        let selectedDoctors = [];
+
         async function searchDoctors() {
             const query = document.getElementById('doctorSearchInput').value.trim();
             const resultsContainer = document.getElementById('doctorSearchResults');
 
             if (!query) {
                 resultsContainer.innerHTML = '<div class="doctor-results-empty">输入关键词搜索医生...</div>';
+                resultsContainer.style.display = 'block';
                 return;
             }
 
             resultsContainer.innerHTML = '<div class="doctor-results-empty">搜索中...</div>';
+            resultsContainer.style.display = 'block';
 
             try {
                 const response = await fetch(`${API_BASE}/api/v1/sharing/doctors?q=${encodeURIComponent(query)}&limit=20`, {
@@ -1784,40 +1789,108 @@
                     return;
                 }
 
-                resultsContainer.innerHTML = doctors.map(doctor => `
-                    <div class="doctor-card" onclick="selectDoctor('${doctor.id}', '${doctor.display_name}', '${doctor.hospital}', '${doctor.department}', '${doctor.specialty}')">
-                        <div class="doctor-card-name">${doctor.display_name}</div>
-                        <div class="doctor-card-info">
-                            ${doctor.hospital || '未知医院'} · ${doctor.department || '未知科室'}<br>
-                            <small style="color: #999;">专业领域：${doctor.specialty || '未填写'}</small>
+                resultsContainer.innerHTML = doctors.map(doctor => {
+                    const isSelected = selectedDoctors.some(d => d.id === doctor.id);
+                    return `
+                    <div class="doctor-card ${isSelected ? 'selected' : ''}" data-doctor-id="${doctor.id}"
+                        onclick="toggleDoctorSelection('${doctor.id}', '${doctor.display_name}', '${doctor.hospital}', '${doctor.department}', '${doctor.specialty}')"
+                        style="border: 2px solid ${isSelected ? '#667eea' : 'transparent'}; background: ${isSelected ? '#f0f3ff' : 'white'};">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div class="doctor-card-name">${doctor.display_name}</div>
+                                <div class="doctor-card-info">
+                                    ${doctor.hospital || '未知医院'} · ${doctor.department || '未知科室'}<br>
+                                    <small style="color: #999;">专业领域：${doctor.specialty || '未填写'}</small>
+                                </div>
+                            </div>
+                            <div style="color: ${isSelected ? '#667eea' : '#ccc'}; font-size: 20px; font-weight: bold;">
+                                ${isSelected ? '✓' : '+'}
+                            </div>
                         </div>
                     </div>
-                `).join('');
+                `}).join('');
             } catch (error) {
                 resultsContainer.innerHTML = '<div class="doctor-results-empty">搜索失败，请重试</div>';
             }
         }
 
-        // 选择医生
-        let selectedDoctorId = null;
-        function selectDoctor(id, name, hospital, department, specialty) {
-            selectedDoctorId = id;
+        function toggleDoctorSelection(id, name, hospital, department, specialty) {
+            const existingIndex = selectedDoctors.findIndex(d => d.id === id);
 
-            document.querySelectorAll('.doctor-card').forEach(card => card.classList.remove('selected'));
-            event.currentTarget.classList.add('selected');
+            if (existingIndex >= 0) {
+                // 取消选择
+                selectedDoctors.splice(existingIndex, 1);
+            } else {
+                // 添加选择
+                selectedDoctors.push({ id, name, hospital, department, specialty });
+            }
 
-            document.getElementById('selectedDoctorName').textContent = name;
-            document.getElementById('selectedDoctorInfo').innerHTML = `
-                <strong>${hospital || '未知医院'}</strong> · ${department || '未知科室'}<br>
-                <small>专业领域：${specialty || '未填写'}</small>
-            `;
-            document.getElementById('selectedDoctorInfo').style.display = 'block';
+            updateSelectedDoctorsDisplay();
+
+            // 刷新搜索结果以更新选中状态
+            const query = document.getElementById('doctorSearchInput').value.trim();
+            if (query) {
+                searchDoctors();
+            }
         }
 
-        // 分享给医生
+        function updateSelectedDoctorsDisplay() {
+            const container = document.getElementById('selectedDoctorInfo');
+            const listContainer = document.getElementById('selectedDoctorList');
+
+            if (selectedDoctors.length === 0) {
+                container.style.display = 'none';
+                document.getElementById('doctorSearchResults').style.display = 'block';
+                document.getElementById('shareActionBtn').style.display = 'none';
+                return;
+            }
+
+            listContainer.innerHTML = selectedDoctors.map(doctor => `
+                <div class="selected-doctor-card" style="margin-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div class="doctor-name">${doctor.name}</div>
+                            <div class="doctor-info">
+                                <strong>${doctor.hospital || '未知医院'}</strong> · ${doctor.department || '未知科室'}<br>
+                                <small>专业领域：${doctor.specialty || '未填写'}</small>
+                            </div>
+                        </div>
+                        <button type="button" onclick="removeDoctor('${doctor.id}')" class="btn-secondary" style="padding: 4px 10px; font-size: 12px;">移除</button>
+                    </div>
+                </div>
+            `).join('');
+
+            container.style.display = 'block';
+            document.getElementById('doctorSearchResults').style.display = 'none';
+            document.getElementById('shareActionBtn').style.display = 'inline-block';
+        }
+
+        function removeDoctor(id) {
+            const index = selectedDoctors.findIndex(d => d.id === id);
+            if (index >= 0) {
+                selectedDoctors.splice(index, 1);
+                updateSelectedDoctorsDisplay();
+
+                // 刷新搜索结果
+                const query = document.getElementById('doctorSearchInput').value.trim();
+                if (query) {
+                    searchDoctors();
+                }
+            }
+        }
+
+        function clearSelectedDoctors() {
+            selectedDoctors = [];
+            updateSelectedDoctorsDisplay();
+            document.getElementById('doctorSearchInput').value = '';
+            document.getElementById('doctorSearchResults').innerHTML = '<div class="doctor-results-empty">输入关键词搜索医生...</div>';
+            document.getElementById('doctorSearchResults').style.display = 'block';
+        }
+
+        // 分享给医生（支持同时分享给多位医生）
         async function shareToDoctor() {
-            if (!selectedDoctorId) {
-                alert('请先选择一位医生');
+            if (selectedDoctors.length === 0) {
+                alert('请先选择至少一位医生');
                 return;
             }
 
@@ -1834,44 +1907,55 @@
 
             const btn = document.getElementById('shareActionBtn');
             btn.disabled = true;
-            btn.textContent = '分享中...';
+            btn.textContent = `分享中 (0/${selectedDoctors.length})...`;
 
-            try {
-                const response = await fetch(`${API_BASE}/api/v1/sharing/cases/${caseId}/share`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        target_type: 'specific_doctor',
-                        doctor_id: selectedDoctorId,
-                        consent_text: '我已阅读并同意将病例分享给选定的医生，分享内容将自动脱敏处理。',
-                        include_history: false,
-                        valid_days: 365
-                    })
-                });
+            let successCount = 0;
+            let failCount = 0;
 
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.detail || '分享失败');
+            // 依次分享给每位医生
+            for (let i = 0; i < selectedDoctors.length; i++) {
+                const doctor = selectedDoctors[i];
+                btn.textContent = `分享中 (${i + 1}/${selectedDoctors.length})...`;
+
+                try {
+                    const response = await fetch(`${API_BASE}/api/v1/sharing/cases/${caseId}/share`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            target_type: 'specific_doctor',
+                            doctor_id: doctor.id,
+                            consent_text: '我已阅读并同意将病例分享给选定的医生，分享内容将自动脱敏处理。',
+                            include_history: false,
+                            valid_days: 365
+                        })
+                    });
+
+                    if (response.ok) {
+                        successCount++;
+                    } else {
+                        failCount++;
+                        console.error(`分享给医生 ${doctor.name} 失败`);
+                    }
+                } catch (error) {
+                    failCount++;
+                    console.error(`分享给医生 ${doctor.name} 出错:`, error);
                 }
-
-                const result = await response.json();
-                alert('病例已成功分享给医生！医生将收到通知。');
-                closeShareModal();
-
-                // 重置选择
-                selectedDoctorId = null;
-                document.getElementById('selectedDoctorInfo').style.display = 'none';
-                document.getElementById('doctorSearchInput').value = '';
-                document.getElementById('doctorSearchResults').innerHTML = '<div class="doctor-results-empty">输入关键词搜索医生...</div>';
-            } catch (error) {
-                alert('分享失败：' + error.message);
-            } finally {
-                btn.disabled = false;
-                btn.textContent = '@提及医生';
             }
+
+            // 显示结果
+            if (successCount > 0) {
+                alert(`成功分享给 ${successCount} 位医生！${failCount > 0 ? `${failCount} 位医生分享失败。` : ''}医生将收到通知。`);
+                closeShareModal();
+                clearSelectedDoctors();
+            } else {
+                alert('分享失败，请重试。');
+            }
+
+            btn.disabled = false;
+            btn.textContent = '@提及医生';
         }
 
         // 打开对比模态框

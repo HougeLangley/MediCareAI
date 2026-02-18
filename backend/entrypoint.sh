@@ -17,9 +17,11 @@ echo "PostgreSQL is up!"
 echo "Initializing database tables..."
 python /app/init_db.py
 
-# Initialize admin account if not exists
 echo "Initializing admin account..."
 python /app/init_admin.py
+
+echo "Initializing chronic diseases data..."
+python -m app.db.init_chronic_diseases
 
 echo "========================================"
 echo "Starting API Server..."

@@ -801,10 +801,89 @@
             }
         }
 
+        // Render chronic diseases detail (for the detailed section)
+        function renderChronicDiseasesDetail(diseases) {
+            if (!diseases || diseases.length === 0) {
+                return '无';
+            }
+
+            return diseases.map(disease => {
+                const typeLabel = disease.disease_type === 'special' ? '特殊病' :
+                                 disease.disease_type === 'chronic' ? '慢性病' : '特殊病+慢性病';
+                const typeColor = disease.disease_type === 'special' ? '#dc3545' :
+                                  disease.disease_type === 'chronic' ? '#007bff' : '#6f42c1';
+
+                // 优先显示中文名称
+                const chineseName = disease.common_names && disease.common_names.length > 0
+                    ? disease.common_names[0]
+                    : disease.icd10_name;
+                const englishName = disease.icd10_name;
+
+                return `
+                    <div style="
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 8px;
+                        padding: 8px 16px;
+                        margin: 5px;
+                        border-radius: 20px;
+                        font-size: 14px;
+                        font-weight: 600;
+                        background: white;
+                        border: 2px solid ${typeColor};
+                        color: ${typeColor};
+                    ">
+                        <span>⚠️ ${chineseName}</span>
+                        <span style="font-size: 12px; opacity: 0.9;">(${englishName} · ${typeLabel})</span>
+                    </div>
+                `;
+            }).join('') + `
+                <div style="margin-top: 10px; font-size: 13px; color: #856404;">
+                    <strong>重要提醒：</strong>该患者患有上述特殊病/慢性病，诊断和用药时需特别注意相关禁忌和相互作用。
+                </div>
+            `;
+        }
+
         function renderCaseDetail(data) {
             const container = document.getElementById('caseDetail');
             const caseItem = data.case;
             const profile = caseItem.anonymous_patient_profile || {};
+
+            // Generate chronic disease tags HTML
+            let chronicDiseasesHtml = '';
+            if (caseItem.patient_chronic_diseases && caseItem.patient_chronic_diseases.length > 0) {
+                const diseaseTags = caseItem.patient_chronic_diseases.map(disease => {
+                    const typeLabel = disease.disease_type === 'special' ? '特殊病' :
+                                     disease.disease_type === 'chronic' ? '慢性病' : '特殊病+慢性病';
+                    const typeColor = disease.disease_type === 'special' ? '#dc3545' :
+                                      disease.disease_type === 'chronic' ? '#007bff' : '#6f42c1';
+                    
+                    // 优先显示中文名称
+                    const chineseName = disease.common_names && disease.common_names.length > 0
+                        ? disease.common_names[0]
+                        : disease.icd10_name;
+                    
+                    return `<span style="
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 4px;
+                        padding: 4px 10px;
+                        margin: 2px;
+                        border-radius: 12px;
+                        font-size: 12px;
+                        font-weight: 500;
+                        background: white;
+                        border: 1px solid ${typeColor};
+                        color: ${typeColor};
+                    ">⚠️ ${chineseName}</span>`;
+                }).join('');
+                
+                chronicDiseasesHtml = `
+                    <div style="margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px;">
+                        ${diseaseTags}
+                    </div>
+                `;
+            }
 
             container.innerHTML = `
                 <div class="case-header">
@@ -814,6 +893,14 @@
                         <span>📍 ${profile.city_tier || '未知地区'}</span>
                         <span>📅 ${new Date(caseItem.created_at).toLocaleDateString('zh-CN')}</span>
                         <span>👁️ ${caseItem.view_count || 0} 次查看</span>
+                    </div>
+                    ${chronicDiseasesHtml}
+                </div>
+
+                <div id="chronicDiseasesSection" class="case-section" style="display: ${caseItem.patient_chronic_diseases && caseItem.patient_chronic_diseases.length > 0 ? 'block' : 'none'};">
+                    <h3 style="color: #dc3545; border-left-color: #dc3545;">⚠️ 患者特殊病/慢性病</h3>
+                    <div class="case-content" id="chronicDiseasesTags" style="background: #fff3cd; border: 1px solid #ffeaa7;">
+                        ${caseItem.patient_chronic_diseases && caseItem.patient_chronic_diseases.length > 0 ? renderChronicDiseasesDetail(caseItem.patient_chronic_diseases) : '无'}
                     </div>
                 </div>
 

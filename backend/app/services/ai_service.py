@@ -444,7 +444,8 @@ class AIService:
         language: str = "zh",
         extracted_documents: Optional[List[Dict[str, Any]]] = None,
         user_id: Optional[str] = None,
-        db: Optional[Any] = None
+        db: Optional[Any] = None,
+        chronic_diseases: Optional[List[Dict[str, Any]]] = None
     ) -> Dict[str, Any]:
         """
         Complete diagnosis workflow.
@@ -523,7 +524,7 @@ class AIService:
         logger.info(f"Querying knowledge base: {disease_category}...")
         kb_result = await self.query_knowledge_base(symptoms, disease_category, patient_info, extracted_texts)
 
-        # Build complete prompt
+        # Build complete prompt with chronic diseases context
         prompt = self._build_diagnosis_prompt(
             patient_info=patient_info,
             symptoms=symptoms,
@@ -531,9 +532,10 @@ class AIService:
             severity=severity,
             extracted_texts=extracted_texts,
             knowledge_base=kb_result,
-            language=language
+            language=language,
+            chronic_diseases=chronic_diseases
         )
-        
+
         logger.info("Calling AI model for diagnosis...")
         
         # 根据语言选择系统提示词
@@ -676,7 +678,8 @@ class AIService:
         disease_category: str = "respiratory",
         language: str = "zh",
         user_id: Optional[str] = None,
-        db: Optional[Any] = None
+        db: Optional[Any] = None,
+        chronic_diseases: Optional[List[Dict[str, Any]]] = None
     ) -> AsyncGenerator[str, None]:
         """
         Complete diagnosis workflow (streaming).
@@ -739,7 +742,7 @@ class AIService:
         logger.info(f"Querying knowledge base: {disease_category}...")
         kb_result = await self.query_knowledge_base(symptoms, disease_category, patient_info, extracted_texts)
 
-        # Build complete prompt
+        # Build complete prompt with chronic diseases context
         prompt = self._build_diagnosis_prompt(
             patient_info=patient_info,
             symptoms=symptoms,
@@ -747,9 +750,10 @@ class AIService:
             severity=severity,
             extracted_texts=extracted_texts,
             knowledge_base=kb_result,
-            language=language
+            language=language,
+            chronic_diseases=chronic_diseases
         )
-        
+
         logger.info("Calling AI model for streaming diagnosis...")
         
         # 根据语言选择系统提示词
@@ -839,7 +843,8 @@ Please answer in English."""
         severity: Optional[str],
         extracted_texts: List[str],
         knowledge_base: Dict[str, Any],
-        language: str = "zh"
+        language: str = "zh",
+        chronic_diseases: Optional[List[Dict[str, Any]]] = None
     ) -> str:
         """
         Build diagnosis prompt.
@@ -866,6 +871,23 @@ Please answer in English."""
                 prompt_parts.append(f"紧急联系人: {patient_info.get('emergency_contact', '未知')}")
                 prompt_parts.append(f"地址: {patient_info.get('address', '未知')}")
                 prompt_parts.append(f"备注: {patient_info.get('notes', '无')}")
+                
+                # Add chronic diseases information | 添加慢性病信息
+                if chronic_diseases and len(chronic_diseases) > 0:
+                    prompt_parts.append("\n【重要 - 患者特殊病与慢性病史】")
+                    prompt_parts.append("该患者确诊有以下特殊病或慢性病，诊断时必须考虑这些疾病的影响：")
+                    for i, disease in enumerate(chronic_diseases, 1):
+                        disease_type_str = "特殊病" if disease.get('disease_type') == 'special' else "慢性病" if disease.get('disease_type') == 'chronic' else "特殊病+慢性病"
+                        prompt_parts.append(f"{i}. {disease.get('icd10_name')} ({disease.get('icd10_code')}) - {disease_type_str}")
+                        if disease.get('severity'):
+                            prompt_parts.append(f"   严重程度: {disease.get('severity')}")
+                        if disease.get('medical_notes'):
+                            prompt_parts.append(f"   医疗注意事项: {disease.get('medical_notes')}")
+                    prompt_parts.append("\n【诊断时必须遵守的注意事项】")
+                    prompt_parts.append("1. 药物选择必须考虑患者的慢性病史，避免药物相互作用")
+                    prompt_parts.append("2. 检查建议要考虑慢性病患者的身体承受能力")
+                    prompt_parts.append("3. 鉴别诊断要区分是慢性病加重还是新发疾病")
+                    prompt_parts.append("4. 治疗方案要兼顾慢性病的持续管理")
             else:
                 prompt_parts.append("无详细的个人信息")
             

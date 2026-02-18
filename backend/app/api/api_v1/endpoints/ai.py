@@ -10,7 +10,7 @@ import json
 import uuid
 from app.db.database import get_db
 from app.core.deps import get_current_active_user
-from app.models.models import User, MedicalDocument
+from app.models.models import User, MedicalDocument, PatientChronicCondition, ChronicDisease
 from app.services.ai_service import ai_service
 from app.services.patient_service import PatientService
 from app.services.medical_case_service import MedicalCaseService
@@ -37,7 +37,8 @@ class ComprehensiveDiagnosisRequest(BaseModel):
     language: str = "zh"
     case_id: Optional[uuid.UUID] = None
     share_with_doctor: bool = False
-    doctor_id: Optional[uuid.UUID] = None
+    doctor_id: Optional[uuid.UUID] = None  # 保留单医生字段用于向后兼容
+    doctor_ids: Optional[List[uuid.UUID]] = []  # 支持同时@多个医生
 
 
 class SymptomAnalysisRequest(BaseModel):
@@ -120,62 +121,57 @@ async def share_case_with_doctor(db: AsyncSession, medical_case, patient: User, 
     from datetime import datetime, timedelta
     from sqlalchemy import select, and_
     
-    stmt = select(SharedMedicalCase).where(
-        SharedMedicalCase.original_case_id == medical_case.id
-    )
-    result = await db.execute(stmt)
-    shared_case = result.scalar_one_or_none()
-    
     pii_cleaner = PIICleanerService()
     
-    if not shared_case:
-        # 创建新的共享病例记录（仅特定医生可见）
-        valid_until = datetime.utcnow() + timedelta(days=365)
-        
-        consent = DataSharingConsent(
-            patient_id=patient.id,
-            share_type='to_specific_doctor',
-            target_doctor_id=doctor_id,
-            consent_version='1.0',
-            consent_text='患者同意将诊断信息共享给指定的医生，分享内容将自动脱敏处理。',
-            valid_until=valid_until,
-            ip_address='127.0.0.1'
-        )
-        db.add(consent)
-        await db.flush()
-        
-        def create_anonymous_profile_v2(patient_user: User):
-            if patient_user.role != 'patient':
-                return {}
-            return patient_user.generate_anonymous_profile()
-        
-        anonymous_profile = create_anonymous_profile_v2(patient)
-        
-        async def clean_medical_content_v2(content):
-            if not content:
-                return None
-            try:
-                result = pii_cleaner.clean_text(content)
-                return result["cleaned_text"]
-            except Exception:
-                return content
-        
-        anonymized_symptoms = await clean_medical_content_v2(medical_case.symptoms)
-        anonymized_diagnosis = await clean_medical_content_v2(medical_case.diagnosis)
-
-        shared_case = SharedMedicalCase(
-            original_case_id=medical_case.id,
-            consent_id=consent.id,
-            anonymous_patient_profile=anonymous_profile,
-            anonymized_symptoms=anonymized_symptoms,
-            anonymized_diagnosis=anonymized_diagnosis,
-            visible_to_doctors=False,
-            visible_for_research=False
-        )
-        db.add(shared_case)
-        await db.flush()
+    # 为@提及医生创建独立的私有共享病例记录
+    # 无论是否存在公开共享记录，都创建新的私有记录
+    valid_until = datetime.utcnow() + timedelta(days=365)
     
-    existing_relation = await db.execute(
+    consent = DataSharingConsent(
+        patient_id=patient.id,
+        share_type='to_specific_doctor',
+        target_doctor_id=doctor_id,
+        consent_version='1.0',
+        consent_text='患者同意将诊断信息共享给指定的医生，分享内容将自动脱敏处理。',
+        valid_until=valid_until,
+        ip_address='127.0.0.1'
+    )
+    db.add(consent)
+    await db.flush()
+    
+    def create_anonymous_profile_v2(patient_user: User):
+        if patient_user.role != 'patient':
+            return {}
+        return patient_user.generate_anonymous_profile()
+    
+    anonymous_profile = create_anonymous_profile_v2(patient)
+    
+    async def clean_medical_content_v2(content):
+        if not content:
+            return None
+        try:
+            result = pii_cleaner.clean_text(content)
+            return result["cleaned_text"]
+        except Exception:
+            return content
+    
+    anonymized_symptoms = await clean_medical_content_v2(medical_case.symptoms)
+    anonymized_diagnosis = await clean_medical_content_v2(medical_case.diagnosis)
+
+    # 创建新的私有共享病例记录（专门用于@提及）
+    shared_case = SharedMedicalCase(
+        original_case_id=medical_case.id,
+        consent_id=consent.id,
+        anonymous_patient_profile=anonymous_profile,
+        anonymized_symptoms=anonymized_symptoms,
+        anonymized_diagnosis=anonymized_diagnosis,
+        visible_to_doctors=False,
+        visible_for_research=False
+    )
+    db.add(shared_case)
+    await db.flush()
+    
+    existing_relation_result = await db.execute(
         select(DoctorPatientRelation).where(
             and_(
                 DoctorPatientRelation.patient_id == patient.id,
@@ -185,7 +181,10 @@ async def share_case_with_doctor(db: AsyncSession, medical_case, patient: User, 
         )
     )
     
-    if not existing_relation.scalar_one_or_none():
+    existing_relation = existing_relation_result.scalar_one_or_none()
+    
+    if not existing_relation:
+        # 创建新的关系
         relation = DoctorPatientRelation(
             patient_id=patient.id,
             doctor_id=doctor_id,
@@ -196,6 +195,13 @@ async def share_case_with_doctor(db: AsyncSession, medical_case, patient: User, 
             shared_case_ids=[str(shared_case.id)]
         )
         db.add(relation)
+    else:
+        # 更新现有关系，添加新的共享病例ID
+        case_id_str = str(shared_case.id)
+        if existing_relation.shared_case_ids is None:
+            existing_relation.shared_case_ids = []
+        if case_id_str not in existing_relation.shared_case_ids:
+            existing_relation.shared_case_ids.append(case_id_str)
     
     await db.commit()
     
@@ -321,16 +327,43 @@ async def comprehensive_diagnosis(
                 })
             
             logger.info(f"Found {len(extracted_documents)} processed documents")
-        
-        # 3. Reload AI configuration from database before calling AI
+
+        # 3. 获取患者的慢性病信息
+        logger.info("Fetching patient's chronic diseases...")
+        chronic_diseases = []
+        try:
+            stmt = select(PatientChronicCondition, ChronicDisease).join(
+                ChronicDisease,
+                PatientChronicCondition.disease_id == ChronicDisease.id
+            ).where(
+                PatientChronicCondition.patient_id == current_user.id,
+                PatientChronicCondition.is_active == True
+            )
+            result = await db.execute(stmt)
+            conditions = result.all()
+
+            for condition, disease in conditions:
+                chronic_diseases.append({
+                    "id": str(disease.id),
+                    "icd10_code": disease.icd10_code,
+                    "icd10_name": disease.icd10_name,
+                    "disease_type": disease.disease_type,
+                    "severity": condition.severity,
+                    "medical_notes": disease.medical_notes
+                })
+            logger.info(f"Found {len(chronic_diseases)} chronic diseases for patient")
+        except Exception as e:
+            logger.warning(f"Failed to fetch chronic diseases: {e}")
+
+        # 4. Reload AI configuration from database before calling AI
         logger.info("Reloading AI configuration from database...")
         ai_config_reloaded = await ai_service.reload_config_from_db(db)
         if ai_config_reloaded:
             logger.info("✅ AI configuration reloaded from database")
         else:
             logger.warning("⚠️ Using fallback AI configuration from environment")
-        
-        # 4. 调用完整诊断流程
+
+        # 5. 调用完整诊断流程（包含慢性病信息）
         result = await ai_service.comprehensive_diagnosis(
             symptoms=request.symptoms,
             patient_info=patient_info,
@@ -341,7 +374,8 @@ async def comprehensive_diagnosis(
             language=request.language,
             extracted_documents=extracted_documents if extracted_documents else None,
             user_id=str(current_user.id),
-            db=db
+            db=db,
+            chronic_diseases=chronic_diseases if chronic_diseases else None
         )
 
         if not result.get('success'):
@@ -489,7 +523,34 @@ async def comprehensive_diagnosis_stream(
 
             logger.info(f"Found {len(extracted_documents)} processed documents")
 
-        # 3. 查询知识库（在流式输出前获取，以便在结束时返回）
+        # 3. 获取患者的慢性病信息
+        logger.info("Fetching patient's chronic diseases for streaming...")
+        chronic_diseases = []
+        try:
+            stmt = select(PatientChronicCondition, ChronicDisease).join(
+                ChronicDisease,
+                PatientChronicCondition.disease_id == ChronicDisease.id
+            ).where(
+                PatientChronicCondition.patient_id == current_user.id,
+                PatientChronicCondition.is_active == True
+            )
+            result = await db.execute(stmt)
+            conditions = result.all()
+
+            for condition, disease in conditions:
+                chronic_diseases.append({
+                    "id": str(disease.id),
+                    "icd10_code": disease.icd10_code,
+                    "icd10_name": disease.icd10_name,
+                    "disease_type": disease.disease_type,
+                    "severity": condition.severity,
+                    "medical_notes": disease.medical_notes
+                })
+            logger.info(f"Found {len(chronic_diseases)} chronic diseases for patient (streaming)")
+        except Exception as e:
+            logger.warning(f"Failed to fetch chronic diseases for streaming: {e}")
+
+        # 4. 查询知识库（在流式输出前获取，以便在结束时返回）
         from app.services.generic_rag_selector import GenericRAGSelector
         from datetime import datetime
 
@@ -570,7 +631,7 @@ async def comprehensive_diagnosis_stream(
         else:
             logger.warning("⚠️ Using fallback AI configuration from environment for streaming")
 
-        # 5. 调用流式诊断流程
+        # 6. 调用流式诊断流程（包含慢性病信息）
         async def generate_stream():
             """生成流式输出"""
             full_diagnosis = ""
@@ -585,7 +646,8 @@ async def comprehensive_diagnosis_stream(
                 disease_category=request.disease_category,
                 language=request.language,
                 user_id=str(current_user.id),
-                db=db
+                db=db,
+                chronic_diseases=chronic_diseases if chronic_diseases else None
             ):
                 full_diagnosis += chunk
                 # 发送 SSE 格式数据
@@ -613,17 +675,26 @@ async def comprehensive_diagnosis_stream(
                         await db.refresh(medical_case)
                         logger.info(f"已更新现有病历的诊断结果: {medical_case.id}, 分享权限: {request.share_with_doctor}")
                         
-                        # 如果用户同意分享给医生，创建共享病例记录
+                        # 1. 如果用户勾选了"允许将本次诊断信息共享给医生端"，创建公开共享病例记录（所有医生可见）
                         if request.share_with_doctor:
                             await create_shared_case(db, medical_case, current_user)
                         
-                        # 如果指定了医生ID，分享给特定医生
+                        # 2. 如果用户@提及了特定医生，无论是否勾选共享，都要分享给这些医生（私有共享）
+                        doctors_to_share = []
+                        if request.doctor_ids:
+                            doctors_to_share.extend(request.doctor_ids)
                         if request.doctor_id:
+                            doctors_to_share.append(request.doctor_id)
+                        
+                        # 去重
+                        doctors_to_share = list(set(doctors_to_share))
+                        
+                        for doctor_id in doctors_to_share:
                             try:
-                                await share_case_with_doctor(db, medical_case, current_user, request.doctor_id)
-                                logger.info(f"病例已分享给指定医生: {request.doctor_id}")
+                                await share_case_with_doctor(db, medical_case, current_user, doctor_id)
+                                logger.info(f"病例已@分享给指定医生: {doctor_id}")
                             except Exception as share_error:
-                                logger.error(f"分享给医生失败: {str(share_error)}")
+                                logger.error(f"@分享给医生 {doctor_id} 失败: {str(share_error)}")
                     else:
                         logger.warning(f"未找到指定的病历ID: {request.case_id}，将创建新病历")
                         medical_case = None
@@ -666,17 +737,26 @@ async def comprehensive_diagnosis_stream(
                     )
                     logger.info(f"病历状态已更新为'completed': {medical_case.id}, 分享权限: {request.share_with_doctor}")
                     
-                    # 如果用户同意分享给医生，创建共享病例记录
+                    # 1. 如果用户勾选了"允许将本次诊断信息共享给医生端"，创建公开共享病例记录（所有医生可见）
                     if request.share_with_doctor:
                         await create_shared_case(db, medical_case, current_user)
                     
-                    # 如果指定了医生ID，分享给特定医生
+                    # 2. 如果用户@提及了特定医生，无论是否勾选共享，都要分享给这些医生（私有共享）
+                    doctors_to_share = []
+                    if request.doctor_ids:
+                        doctors_to_share.extend(request.doctor_ids)
                     if request.doctor_id:
+                        doctors_to_share.append(request.doctor_id)
+                    
+                    # 去重
+                    doctors_to_share = list(set(doctors_to_share))
+                    
+                    for doctor_id in doctors_to_share:
                         try:
-                            await share_case_with_doctor(db, medical_case, current_user, request.doctor_id)
-                            logger.info(f"病例已分享给指定医生: {request.doctor_id}")
+                            await share_case_with_doctor(db, medical_case, current_user, doctor_id)
+                            logger.info(f"病例已@分享给指定医生: {doctor_id}")
                         except Exception as share_error:
-                            logger.error(f"分享给医生失败: {str(share_error)}")
+                            logger.error(f"@分享给医生 {doctor_id} 失败: {str(share_error)}")
 
                 # 发送完成信息
                 completion_data = {

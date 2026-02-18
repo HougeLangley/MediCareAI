@@ -247,6 +247,14 @@
             font-size: 14px;
         }
 
+        .disease-tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 10px 0;
+            min-height: 50px;
+        }
+
         @media (max-width: 768px) {
             .form-row {
                 grid-template-columns: 1fr;
@@ -379,6 +387,55 @@
             </div>
         </div>
 
+        <!-- 特殊病与慢性病管理 -->
+        <div class="form-section" id="chronicDiseasesSection">
+            <h2>特殊病与慢性病管理</h2>
+
+            <div class="info-card" style="border-left-color: #dc3545;">
+                <p><strong>重要提示：</strong>如果您患有特殊病或慢性病，请务必如实填写。这将帮助AI在诊断时考虑您的病史，避免药物相互作用等风险。</p>
+            </div>
+
+            <!-- 已选择的疾病列表 -->
+            <div class="form-group">
+                <label>我的特殊病/慢性病</label>
+                <div id="selectedDiseases" class="disease-tags-container">
+                    <p class="no-disease-text" style="color: #999; font-size: 14px; padding: 10px 0;">暂无记录，请从下方选择添加</p>
+                </div>
+            </div>
+
+            <!-- 添加疾病 -->
+            <div class="form-row">
+                <div class="form-group" style="flex: 2;">
+                    <label>选择疾病</label>
+                    <select id="diseaseSelect">
+                        <option value="">请选择疾病...</option>
+                    </select>
+                    <small id="diseaseLoadingText" style="color: #666; margin-top: 5px; display: block;">正在加载疾病列表...</small>
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>严重程度</label>
+                    <select id="diseaseSeverity">
+                        <option value="">请选择</option>
+                        <option value="mild">轻度</option>
+                        <option value="moderate">中度</option>
+                        <option value="severe">重度</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>确诊日期</label>
+                <input type="date" id="diagnosisDate" placeholder="选择确诊日期">
+            </div>
+
+            <div class="form-group">
+                <label>备注说明</label>
+                <textarea id="diseaseNotes" placeholder="可选：补充说明病情、用药情况等"></textarea>
+            </div>
+
+            <button type="button" class="btn-save" onclick="addChronicDisease()" style="margin-top: 10px;">添加疾病</button>
+        </div>
+
         <!-- 保存按钮 -->
         <div class="form-section">
             <div class="result" id="result"></div>
@@ -390,87 +447,43 @@
         </div>
     </div>
 
+    <script src="/js/config.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/utils.js"></script>
     <script>
-        const API_BASE = '';
-
         // 检查用户登录状态
         function checkAuth() {
-            const token = localStorage.getItem('access_token');
-            if (!token) {
+            if (!Auth.isAuthenticated()) {
                 window.location.href = '/login.html';
-                return;
             }
         }
 
         // 退出登录
         function logout() {
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
-            localStorage.removeItem('user_name');
-            localStorage.removeItem('user_email');
-            localStorage.removeItem('user_id');
-            window.location.href = '/login.html';
-        }
-
-        // 处理 401 错误 - 清除 token 并跳转到登录页
-        function handleUnauthorized() {
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
-            localStorage.removeItem('user_name');
-            localStorage.removeItem('user_email');
-            localStorage.removeItem('user_id');
+            Auth.logout();
             window.location.href = '/login.html';
         }
 
         // 加载用户信息
         async function loadUserProfile() {
-            const token = localStorage.getItem('access_token');
-            if (!token) {
-                handleUnauthorized();
-                return;
-            }
-
             try {
                 // 加载用户账户信息
-                const userResponse = await fetch(`${API_BASE}/api/v1/auth/me`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
-                if (userResponse.status === 401) {
-                    handleUnauthorized();
-                    return;
+                const userData = await API.get('/auth/me');
+                // 填充用户基本信息
+                if (userData.email) {
+                    document.getElementById('email').value = userData.email;
+                    document.getElementById('userEmail').textContent = userData.email;
                 }
-
-                if (userResponse.ok) {
-                    const userData = await userResponse.json();
-                    // 填充用户基本信息
-                    if (userData.email) {
-                        document.getElementById('email').value = userData.email;
-                        document.getElementById('userEmail').textContent = userData.email;
-                    }
-                    if (userData.full_name) {
-                        document.getElementById('fullName').value = userData.full_name;
-                        document.getElementById('welcomeTitle').textContent = userData.full_name + '的个人中心';
-                        localStorage.setItem('user_name', userData.full_name);
-                    }
+                if (userData.full_name) {
+                    document.getElementById('fullName').value = userData.full_name;
+                    document.getElementById('welcomeTitle').textContent = userData.full_name + '的个人中心';
+                    localStorage.setItem('user_name', userData.full_name);
                 }
 
                 // 加载患者详细信息
-                const patientResponse = await fetch(`${API_BASE}/api/v1/patients/me`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
-                if (patientResponse.status === 401) {
-                    handleUnauthorized();
-                    return;
-                }
-
-                if (patientResponse.ok) {
-                    const patientData = await patientResponse.json();
+                try {
+                    const patientData = await API.get('/patients/me');
                     console.log('加载患者数据成功:', patientData);
                     // 填充患者信息
                     if (patientData.date_of_birth) document.getElementById('dateOfBirth').value = patientData.date_of_birth;
@@ -490,12 +503,13 @@
                     
                     if (patientData.address) document.getElementById('address').value = patientData.address;
                     if (patientData.notes) document.getElementById('notes').value = patientData.notes;
-                } else if (patientResponse.status === 404) {
+                } catch (error) {
+                    // 患者记录不存在（正常，首次访问）
                     console.log('患者记录不存在（正常，首次访问）');
                 }
             } catch (error) {
                 console.error('加载用户信息失败:', error);
-                showResult('error', '加载用户信息失败，请刷新页面重试');
+                Utils.showToast('加载用户信息失败，请刷新页面重试', 'error');
             }
         }
 
@@ -532,26 +546,9 @@
 
             try {
                 // 1. 保存用户基本信息
-                const userResponse = await fetch(`${API_BASE}/api/v1/auth/me`, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        full_name: fullName
-                    })
+                await API.put('/auth/me', {
+                    full_name: fullName
                 });
-
-                if (userResponse.status === 401) {
-                    handleUnauthorized();
-                    return;
-                }
-
-                if (!userResponse.ok) {
-                    const errorData = await userResponse.json();
-                    throw new Error(errorData.detail || '保存用户信息失败');
-                }
 
                 // 2. 保存患者详细信息
                 // 注意：name 从 User 表获取，不在 Patient 表中存储
@@ -572,63 +569,36 @@
                     notes: document.getElementById('notes').value || null
                 };
 
-                const patientResponse = await fetch(`${API_BASE}/api/v1/patients/me`, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(patientData)
-                });
-
-                if (patientResponse.status === 401) {
-                    handleUnauthorized();
-                    return;
-                }
-
-                if (patientResponse.ok || patientResponse.status === 404) {
+                // 尝试更新患者信息
+                try {
+                    await API.put('/patients/me', patientData);
+                    console.log('患者记录更新成功');
+                } catch (error) {
                     // 如果患者记录不存在(404)，尝试创建
-                    if (patientResponse.status === 404) {
+                    if (error.message && error.message.includes('404')) {
                         console.log('患者记录不存在，正在创建新记录...', patientData);
-                        const createResponse = await fetch(`${API_BASE}/api/v1/patients`, {
-                            method: 'POST',
-                            headers: {
-                                'Authorization': `Bearer ${token}`,
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(patientData)
-                        });
-                        
-                        if (createResponse.status === 401) {
-                            handleUnauthorized();
-                            return;
-                        }
-                        
-                        if (!createResponse.ok) {
-                            const errorData = await createResponse.json();
-                            console.error('创建患者记录失败:', errorData);
-                            showResult('error', '创建档案失败：' + (errorData.detail || '未知错误'));
-                            return;
-                        } else {
+                        try {
+                            await API.post('/patients', patientData);
                             console.log('患者记录创建成功');
+                        } catch (createError) {
+                            console.error('创建患者记录失败:', createError);
+                            showResult('error', '创建档案失败：' + (createError.message || '未知错误'));
+                            return;
                         }
+                    } else {
+                        throw error;
                     }
-
-                    // 保存成功
-                    localStorage.setItem('user_name', fullName);
-                    document.getElementById('welcomeTitle').textContent = fullName + '的个人中心';
-                    showResult('success', '个人信息保存成功！2秒后自动返回主页...');
-                    
-                    // 2秒后自动返回主页
-                    setTimeout(() => {
-                        window.location.href = 'index.html';
-                    }, 2000);
-                } else {
-                    const errorData = await patientResponse.json();
-                    console.warn('保存患者信息失败:', errorData);
-                    // 即使患者信息保存失败，用户信息已保存
-                    showResult('success', '基本信息已保存（部分健康信息可能未同步）');
                 }
+
+                // 保存成功
+                localStorage.setItem('user_name', fullName);
+                document.getElementById('welcomeTitle').textContent = fullName + '的个人中心';
+                showResult('success', '个人信息保存成功！2秒后自动返回主页...');
+                
+                // 2秒后自动返回主页
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 2000);
             } catch (error) {
                 console.error('保存失败:', error);
                 showResult('error', '保存失败：' + error.message);
@@ -653,7 +623,228 @@
         window.addEventListener('load', () => {
             checkAuth();
             loadUserProfile();
+            loadChronicDiseases();
+            loadDiseaseOptions();
         });
+
+        // 存储所有可用疾病和已选疾病
+        let availableDiseases = [];
+        let selectedDiseases = [];
+
+        // 加载疾病选项
+        async function loadDiseaseOptions() {
+            if (!Auth.isAuthenticated()) return;
+
+            try {
+                const data = await API.get('/chronic-diseases', { page_size: 100 });
+                availableDiseases = data.items || [];
+
+                console.log('Loaded diseases:', availableDiseases);
+
+                // 填充下拉框
+                const select = document.getElementById('diseaseSelect');
+
+                // 重新构建 select，保留第一个默认选项
+                select.innerHTML = '<option value="">请选择疾病...</option>';
+
+                // 创建 optgroup
+                const chronicGroup = document.createElement('optgroup');
+                chronicGroup.label = '慢性病';
+
+                const specialGroup = document.createElement('optgroup');
+                specialGroup.label = '特殊病';
+
+                const bothGroup = document.createElement('optgroup');
+                bothGroup.label = '慢性病+特殊病';
+
+                // 分类填充疾病
+                availableDiseases.forEach(disease => {
+                    const option = document.createElement('option');
+                    option.value = disease.id;
+
+                    // 优先显示中文名称，如果没有则显示英文名称
+                    const chineseName = disease.common_names && disease.common_names.length > 0
+                        ? disease.common_names[0]
+                        : disease.icd10_name;
+                    const englishName = disease.icd10_name;
+
+                    // 格式：中文名称 (English Name) - ICD-10 Code
+                    option.textContent = `${chineseName} (${englishName}) [${disease.icd10_code}]`;
+
+                    if (disease.disease_type === 'chronic') {
+                        chronicGroup.appendChild(option);
+                    } else if (disease.disease_type === 'special') {
+                        specialGroup.appendChild(option);
+                    } else {
+                        bothGroup.appendChild(option);
+                    }
+                });
+
+                // 只有有内容的组才添加到 select
+                if (chronicGroup.children.length > 0) {
+                    select.appendChild(chronicGroup);
+                }
+                if (specialGroup.children.length > 0) {
+                    select.appendChild(specialGroup);
+                }
+                if (bothGroup.children.length > 0) {
+                    select.appendChild(bothGroup);
+                }
+
+                // 如果没有加载到任何疾病，显示提示
+                if (availableDiseases.length === 0) {
+                    const emptyOption = document.createElement('option');
+                    emptyOption.value = '';
+                    emptyOption.textContent = '暂无疾病数据，请先初始化数据库';
+                    emptyOption.disabled = true;
+                    select.appendChild(emptyOption);
+                }
+
+                console.log('Disease options populated:', select.innerHTML);
+
+                // 隐藏加载提示
+                const loadingText = document.getElementById('diseaseLoadingText');
+                if (loadingText) {
+                    loadingText.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('加载疾病列表失败:', error);
+                const loadingText = document.getElementById('diseaseLoadingText');
+                if (loadingText) {
+                    loadingText.textContent = '加载失败：' + error.message;
+                    loadingText.style.color = '#dc3545';
+                }
+            }
+        }
+
+        // 加载患者的慢性病
+        async function loadChronicDiseases() {
+            if (!Auth.isAuthenticated()) return;
+
+            try {
+                const data = await API.get('/chronic-diseases/patients/me/chronic-diseases');
+                selectedDiseases = data.items || [];
+                renderSelectedDiseases();
+            } catch (error) {
+                console.error('加载患者慢性病失败:', error);
+            }
+        }
+
+        // 渲染已选择的疾病
+        function renderSelectedDiseases() {
+            const container = document.getElementById('selectedDiseases');
+
+            if (selectedDiseases.length === 0) {
+                container.innerHTML = '<p class="no-disease-text" style="color: #999; font-size: 14px; padding: 10px 0;">暂无记录，请从下方选择添加</p>';
+                return;
+            }
+
+            container.innerHTML = '';
+            selectedDiseases.forEach(condition => {
+                const disease = condition.disease;
+                const tag = document.createElement('div');
+                tag.className = 'disease-tag';
+                tag.style.cssText = 'display: inline-flex; align-items: center; gap: 8px; padding: 8px 15px; margin: 5px; border-radius: 20px; font-size: 14px; font-weight: 500;';
+
+                // 根据疾病类型设置颜色
+                if (disease.disease_type === 'special') {
+                    tag.style.background = '#fff3cd';
+                    tag.style.color = '#856404';
+                    tag.style.border = '1px solid #ffeaa7';
+                } else if (disease.disease_type === 'chronic') {
+                    tag.style.background = '#d1ecf1';
+                    tag.style.color = '#0c5460';
+                    tag.style.border = '1px solid #bee5eb';
+                } else {
+                    tag.style.background = '#f8d7da';
+                    tag.style.color = '#721c24';
+                    tag.style.border = '1px solid #f5c6cb';
+                }
+
+                const typeLabel = disease.disease_type === 'special' ? '特殊病' :
+                                 disease.disease_type === 'chronic' ? '慢性病' : '特殊病+慢性病';
+
+                // 优先显示中文名称
+                const chineseName = disease.common_names && disease.common_names.length > 0
+                    ? disease.common_names[0]
+                    : disease.icd10_name;
+
+                tag.innerHTML = `
+                    <span>${chineseName}</span>
+                    <span style="font-size: 12px; opacity: 0.8;">(${typeLabel}${condition.severity ? ' - ' + getSeverityLabel(condition.severity) : ''})</span>
+                    <button onclick="removeChronicDisease('${condition.id}')" style="background: none; border: none; color: inherit; cursor: pointer; font-size: 16px; padding: 0; margin-left: 5px;">×</button>
+                `;
+
+                container.appendChild(tag);
+            });
+        }
+
+        function getSeverityLabel(severity) {
+            const labels = {
+                'mild': '轻度',
+                'moderate': '中度',
+                'severe': '重度'
+            };
+            return labels[severity] || severity;
+        }
+
+        // 添加疾病
+        async function addChronicDisease() {
+            if (!Auth.isAuthenticated()) {
+                showResult('error', '请先登录');
+                return;
+            }
+
+            const diseaseId = document.getElementById('diseaseSelect').value;
+            const severity = document.getElementById('diseaseSeverity').value;
+            const diagnosisDate = document.getElementById('diagnosisDate').value;
+            const notes = document.getElementById('diseaseNotes').value;
+
+            if (!diseaseId) {
+                showResult('error', '请选择疾病');
+                return;
+            }
+
+            try {
+                await API.post('/chronic-diseases/patients/me/chronic-diseases', {
+                    disease_id: diseaseId,
+                    severity: severity || null,
+                    diagnosis_date: diagnosisDate || null,
+                    notes: notes || null
+                });
+
+                // 清空表单
+                document.getElementById('diseaseSelect').value = '';
+                document.getElementById('diseaseSeverity').value = '';
+                document.getElementById('diagnosisDate').value = '';
+                document.getElementById('diseaseNotes').value = '';
+
+                // 重新加载列表
+                await loadChronicDiseases();
+                Utils.showToast('疾病添加成功', 'success');
+            } catch (error) {
+                console.error('添加疾病失败:', error);
+                Utils.showToast('添加失败：' + error.message, 'error');
+            }
+        }
+
+        // 删除疾病
+        async function removeChronicDisease(conditionId) {
+            if (!confirm('确定要删除这条疾病记录吗？')) {
+                return;
+            }
+
+            if (!Auth.isAuthenticated()) return;
+
+            try {
+                await API.delete(`/chronic-diseases/patients/me/chronic-diseases/${conditionId}`);
+                await loadChronicDiseases();
+                showResult('success', '疾病记录已删除');
+            } catch (error) {
+                console.error('删除疾病失败:', error);
+                showResult('error', '删除失败');
+            }
+        }
     </script>
 </body>
 </html>

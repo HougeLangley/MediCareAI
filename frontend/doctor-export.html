@@ -354,7 +354,7 @@
 
         <div class="export-panel">
             <div class="alert alert-info">
-                💡 提示：仅显示已设置为"科研可用"的病例数据，所有导出内容均已脱敏处理。
+                💡 提示：显示公开病例和@提及您的病例，所有导出内容均已脱敏处理。
             </div>
 
             <div class="export-options">
@@ -430,7 +430,7 @@
             const container = document.getElementById('casesList');
             
             try {
-                const response = await fetch(`${API_BASE}/api/v1/doctor/cases?type=public&limit=100`, {
+                const response = await fetch(`${API_BASE}/api/v1/doctor/cases?type=all&limit=100`, {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
                 });
 

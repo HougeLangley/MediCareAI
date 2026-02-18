@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.api_v1.endpoints import auth, patients, documents, ai, medical_cases, vector_embedding, data_sharing, sharing, doctor, admin
+from app.api.api_v1.endpoints import auth, patients, documents, ai, medical_cases, vector_embedding, data_sharing, sharing, doctor, admin, chronic_diseases, monitoring
 from app.services.knowledge_base_service import router as knowledge_router
 
 api_router = APIRouter()
@@ -32,5 +32,11 @@ api_router.include_router(sharing.router, prefix="/sharing", tags=["sharing-doct
 # 医生管理路由
 api_router.include_router(doctor.router, prefix="/doctor", tags=["doctor"])
 
+# 慢性病与特殊病管理路由
+api_router.include_router(chronic_diseases.router, tags=["chronic-diseases"])
+
 # 管理员路由 (Admin only)
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
+
+# 监控指标路由
+api_router.include_router(monitoring.router, prefix="/monitoring", tags=["monitoring"])

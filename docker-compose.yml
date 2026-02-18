@@ -43,8 +43,8 @@ services:
       args:
         - USE_CN_MIRROR=${USE_CN_MIRROR:-false}
     container_name: medicare_backend
-    # 开发环境启用热重载 (生产环境删除此行)
-    command: ["--reload"]
+    # 生产环境配置 - 4个工作进程
+    command: ["--workers", "4"]
     env_file:
       - .env
     environment:

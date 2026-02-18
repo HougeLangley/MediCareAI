@@ -266,12 +266,13 @@
         </div>
     </div>
 
+    <script src="/js/config.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/utils.js"></script>
     <script>
-        const API_BASE = '';
-
         function checkAuth() {
-            const token = localStorage.getItem('access_token');
-            if (!token) {
+            if (!Auth.isAuthenticated()) {
                 window.location.href = '/doctor-login.html';
                 return false;
             }
@@ -279,19 +280,14 @@
         }
 
         function logout() {
-            localStorage.clear();
+            Auth.logout();
             window.location.href = '/doctor-login.html';
         }
 
         async function loadDoctorInfo() {
             try {
-                const response = await fetch(`${API_BASE}/api/v1/auth/me`, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    document.getElementById('doctorName').textContent = data.full_name || '医生';
-                }
+                const data = await API.get('/auth/me');
+                document.getElementById('doctorName').textContent = data.full_name || '医生';
             } catch (error) {
                 console.error('加载医生信息失败:', error);
             }
@@ -305,19 +301,11 @@
             const category = document.getElementById('categoryFilter').value;
 
             try {
-                let url = `${API_BASE}/api/v1/doctor/cases?type=${type}&limit=50`;
-                if (category) url += `&disease_category=${category}`;
-
-                const response = await fetch(url, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
-                });
-
-                if (response.ok) {
-                    const cases = await response.json();
-                    renderCases(cases);
-                } else {
-                    throw new Error('加载失败');
-                }
+                const params = { type, limit: 50 };
+                if (category) params.disease_category = category;
+                
+                const cases = await API.get('/doctor/cases', params);
+                renderCases(cases);
             } catch (error) {
                 container.innerHTML = `
                     <div class="empty-state">
@@ -341,7 +329,17 @@
                 return;
             }
 
-            container.innerHTML = cases.map(caseItem => `
+                container.innerHTML = cases.map(caseItem => {
+                // Build chronic disease tags using shared utility
+                let chronicDiseaseTags = '';
+                if (caseItem.patient_chronic_diseases && caseItem.patient_chronic_diseases.length > 0) {
+                    chronicDiseaseTags = `<div class="chronic-diseases" style="margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 5px;">
+                        ${caseItem.patient_chronic_diseases.map(disease => 
+                            Utils.createDiseaseTag(disease, { small: true })
+                        ).join('')}</div>`;
+                }
+
+                return `
                 <div class="case-card" onclick="viewCase('${caseItem.id}')">
                     <div class="case-header">
                         <span class="case-id">病例 #${caseItem.id.slice(0, 8)}</span>
@@ -351,6 +349,7 @@
                         <span>👤 ${caseItem.anonymous_patient_profile?.age_range || '未知年龄'} · ${caseItem.anonymous_patient_profile?.gender || '未知性别'}</span>
                         <span>📍 ${caseItem.anonymous_patient_profile?.city_tier || '未知地区'}</span>
                     </div>
+                    ${chronicDiseaseTags}
                     <div class="case-summary">
                         ${caseItem.anonymized_symptoms || '暂无症状描述'}
                     </div>
@@ -359,7 +358,7 @@
                         <span>👁️ ${caseItem.view_count || 0} 次查看</span>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         }
 
         function viewCase(caseId) {

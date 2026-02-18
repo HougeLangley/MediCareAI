@@ -11,6 +11,120 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.9] - 2026-02-19
+
+### 主要更新 Highlights | Major Updates
+
+#### 📢 @医生功能修复与增强 (@Doctor Mention Fixes & Enhancements)
+- **修复 @提及隐私泄漏问题** Fixed @mention privacy leak
+  - 患者 @A医生，B医生不再能看到该病例
+  - 每个 @提及创建独立的私有共享记录
+  - 严格隔离不同医生的 @提及病例
+
+- **支持同时 @多位医生** Support mentioning multiple doctors simultaneously
+  - 前端支持多选医生（点击切换选择/取消）
+  - 后端支持 `doctor_ids` 数组批量处理
+  - 每位被 @医生都会收到独立的病例分享
+
+- **修复导出权限问题** Fixed export permission issues
+  - @提及的医生可以正确导出病例
+  - 权限检查验证具体的 case_id 是否在 shared_case_ids 中
+  - 未 @提及的医生无法导出病例
+
+#### 🔐 隐私授权逻辑分离 (Privacy Authorization Logic Separation)
+- **@提及与公开共享分离** Separated @mention from public sharing
+  - @提及医生：无论是否勾选"允许共享给医生端"，都仅对 @医生可见
+  - 勾选"允许共享"：病例对所有医生公开可见
+  - 两者独立，可同时使用
+
+### 新增功能 Added
+- `frontend/symptom-submit.html` - 多医生选择 UI（支持添加/移除多位医生）
+- `frontend/medical-records.html` - 分享模态框多医生支持
+
+### 变更 Changed
+- `backend/app/api/api_v1/endpoints/ai.py`:
+  - 添加 `doctor_ids` 字段支持多医生 @mention
+  - 修复 `share_case_with_doctor` 总是创建新的私有 SharedMedicalCase
+  - @mention 逻辑与共享 checkbox 分离
+- `backend/app/api/api_v1/endpoints/doctor.py`:
+  - 修复 `check_export_permission` 验证具体 case_id
+  - 修复 `get_doctor_accessible_cases` 只返回明确的 shared_case_ids
+- `frontend/doctor-export.html` - 修改查询类型为 `all`（公开 + @提及）
+
+### 修复 Fixed
+- 修复 @提及病例被非目标医生看到的问题
+  - 问题：`share_case_with_doctor` 复用可能已公开的 SharedMedicalCase
+  - 解决：每次 @提及都创建新的私有记录
+- 修复医生可以看到患者的所有非公开病例的问题
+  - 问题：`get_doctor_accessible_cases` 返回患者的所有 visible_to_doctors=False 病例
+  - 解决：只返回 `shared_case_ids` 中明确的病例ID
+- 修复导出页面显示"暂无可导出的病例"的问题
+  - 问题：查询类型为 `public`，@提及病例无法显示
+  - 解决：修改为 `all` 类型查询
+
+### 技术细节 Technical Details
+- **多医生 @mention**: 前端使用 `selectedDoctors` 数组管理选择状态
+- **私有记录创建**: `share_case_with_doctor` 不再检查现有记录，总是新建
+- **权限隔离**: `DoctorPatientRelation.shared_case_ids` 严格限制医生可见范围
+
+---
+
+## [2.0.8] - 2026-02-17
+
+### 主要更新 Highlights | Major Updates
+
+#### 🏥 慢性病与特殊病管理功能 (Chronic & Special Disease Management)
+- **新增患者慢性病档案管理** Added patient chronic disease profile management
+  - 支持添加/管理43种ICD-10编码的慢性病和特殊病
+  - 疾病类型包括：特殊病(Special)、慢性病(Chronic)、两者兼具(Both)
+  - 支持记录病情严重程度、确诊日期、备注信息
+  - 软删除机制：标记为 inactive 而非物理删除
+
+#### 🤖 AI诊断集成慢性病数据 (AI Diagnosis with Chronic Disease Context)
+- **AI诊断时自动参考患者慢性病信息** AI now considers patient's chronic diseases
+  - 诊断提示词中自动包含患者慢性病列表
+  - AI会考虑药物相互作用和禁忌症
+  - 针对慢性病患者提供个性化诊断建议
+
+#### 👨‍⚕️ 医生端慢性病警告显示 (Doctor Side Chronic Disease Warnings)
+- **病例列表显示患者慢性病标签** Case list shows patient chronic disease tags
+  - 医生病例列表API返回 `patient_chronic_diseases` 字段
+  - 不同疾病类型用不同颜色区分（红色-特殊病/蓝色-慢性病/紫色-两者兼具）
+  - 病例详情页面突出显示慢性病警告区域
+
+### 新增功能 Added
+- `backend/app/models/models.py` - 新增 `ChronicDisease` 和 `PatientChronicCondition` 模型
+- `backend/app/db/chronic_disease_data.py` - 43种ICD-10慢性病/特殊病数据
+- `backend/app/db/init_chronic_diseases.py` - 数据库初始化脚本
+- `backend/app/api/api_v1/endpoints/chronic_diseases.py` - 慢性病管理API端点
+- `backend/app/api/api_v1/endpoints/doctor.py` - 新增病例列表慢性病数据加载
+- `frontend/user-profile.html` - 患者端慢性病管理UI
+- `frontend/doctor-cases.html` - 医生端病例列表慢性病标签显示
+- `frontend/doctor-case-detail.html` - 医生端病例详情慢性病警告
+
+### 变更 Changed
+- `backend/app/services/ai_service.py` - AI服务支持传入患者慢性病数据
+- `backend/app/api/api_v1/endpoints/ai.py` - AI诊断API自动加载患者慢性病
+- `backend/app/api/api_v1/api.py` - 注册慢性病管理路由
+
+### 修复 Fixed
+- 修复 `doctor.py` 中 `disease_category` 属性访问错误
+  - 问题：`MedicalCase` 对象没有 `disease_category` 属性
+  - 解决：通过 `case.original_case.disease.category` 正确访问疾病分类
+  - 添加 `selectinload` 预加载优化查询性能
+
+### 技术细节 Technical Details
+- **数据库表**: `chronic_diseases` (43条记录), `patient_chronic_conditions` (患者关联表)
+- **软删除**: `is_active` 字段标记，删除时设为 False，重新添加时激活
+- **API端点**:
+  - `GET /api/v1/chronic-diseases` - 获取所有慢性病列表
+  - `POST /api/v1/patients/me/chronic-diseases` - 患者添加慢性病
+  - `PUT /api/v1/patients/me/chronic-diseases/{id}` - 更新慢性病信息
+  - `DELETE /api/v1/patients/me/chronic-diseases/{id}` - 软删除慢性病
+  - `GET /api/v1/patients/{patient_id}/chronic-diseases` - 医生查看患者慢性病
+
+---
+
 ## [2.0.7] - 2026-02-16
 
 ### 主要更新 Highlights | Major Updates

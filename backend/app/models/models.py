@@ -175,11 +175,16 @@ class User(Base):
     
     # Common relationships
     user_sessions = relationship("UserSession", back_populates="user",
-                                cascade="all, delete-orphan")
+                                 cascade="all, delete-orphan")
     audit_logs = relationship("AuditLog", back_populates="user")
     data_sharing_consents = relationship("DataSharingConsent", back_populates="patient",
-                                        foreign_keys="DataSharingConsent.patient_id",
-                                        cascade="all, delete-orphan")
+                                         foreign_keys="DataSharingConsent.patient_id",
+                                         cascade="all, delete-orphan")
+
+    # Chronic conditions relationship | 慢性病关联
+    chronic_conditions = relationship("PatientChronicCondition",
+                                      back_populates="patient",
+                                      cascade="all, delete-orphan")
     
     def get_display_info(self):
         """Get display information based on role / 根据角色获取展示信息"""
@@ -240,21 +245,120 @@ class User(Base):
 class Disease(Base):
     """Disease Model - Enhanced with vector search support / 疾病模型 - 支持向量检索"""
     __tablename__ = "diseases"
-    
+
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String(255), unique=True, nullable=False)
     code = Column(String(50), unique=True)
     description = Column(Text)
-    category = Column(String(100), index=True, 
+    category = Column(String(100), index=True,
                      comment="Disease category for grouping / 疾病分类")
     guidelines_json = Column(JSONB)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now())
-    
+
     # Relationships
     medical_cases = relationship("MedicalCase", back_populates="disease")
     knowledge_chunks = relationship("KnowledgeBaseChunk", back_populates="disease")
+
+
+# =============================================================================
+# ICD-10 Chronic and Special Disease Model | ICD-10特殊病与慢性病模型
+# =============================================================================
+class ChronicDisease(Base):
+    """
+    Chronic and Special Disease Model - Based on ICD-10 / 慢性病与特殊病模型
+
+    中国医保规定的特殊病和慢性病列表，基于ICD-10编码。
+    用于患者档案管理和AI诊断参考。
+    """
+    __tablename__ = "chronic_diseases"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+    # ICD-10 Coding | ICD-10编码
+    icd10_code = Column(String(20), unique=True, nullable=False, index=True,
+                       comment="ICD-10 disease code / ICD-10疾病编码")
+    icd10_name = Column(String(255), nullable=False,
+                       comment="ICD-10 official name / ICD-10官方名称")
+
+    # Disease Classification | 疾病分类
+    disease_type = Column(Enum('chronic', 'special', 'both', name='disease_type'),
+                         nullable=False,
+                         comment="Disease type: chronic/special/both / 疾病类型：慢性病/特殊病/两者皆是")
+
+    # Common Names | 常用名称
+    common_names = Column(ARRAY(String),
+                         comment="Common aliases / 常用别名列表")
+
+    # Category | 分类
+    category = Column(String(100), index=True,
+                     comment="Disease category / 疾病分类")
+
+    # Status | 状态
+    is_active = Column(Boolean, default=True,
+                      comment="Whether disease is active in list / 是否在列表中启用")
+
+    # Description | 描述
+    description = Column(Text,
+                        comment="Disease description / 疾病描述")
+
+    # Medical Notes | 医疗注意事项
+    medical_notes = Column(Text,
+                          comment="Important medical notes for AI / AI诊断医疗注意事项")
+
+    # Audit Timestamps | 审计时间戳
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    patient_conditions = relationship("PatientChronicCondition",
+                                     back_populates="chronic_disease",
+                                     cascade="all, delete-orphan")
+
+
+class PatientChronicCondition(Base):
+    """
+    Patient Chronic Condition Association / 患者慢性病关联表
+
+    关联患者和慢性病，支持多对多关系。
+    """
+    __tablename__ = "patient_chronic_conditions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+    # Foreign Keys | 外键
+    patient_id = Column(UUID(as_uuid=True), ForeignKey("users.id"),
+                       nullable=False, index=True)
+    disease_id = Column(UUID(as_uuid=True), ForeignKey("chronic_diseases.id"),
+                       nullable=False, index=True)
+
+    # Condition Details | 病情详情
+    diagnosis_date = Column(Date, nullable=True,
+                           comment="Date of diagnosis / 确诊日期")
+    severity = Column(Enum('mild', 'moderate', 'severe', name='condition_severity'),
+                     nullable=True,
+                     comment="Condition severity / 病情严重程度")
+    notes = Column(Text,
+                  comment="Patient notes about condition / 患者备注")
+
+    # Status | 状态
+    is_active = Column(Boolean, default=True,
+                      comment="Whether condition is currently active / 当前是否活跃")
+
+    # Audit Timestamps | 审计时间戳
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    patient = relationship("User", back_populates="chronic_conditions")
+    chronic_disease = relationship("ChronicDisease", back_populates="patient_conditions")
+
+    # Unique constraint - one disease per patient
+    __table_args__ = (
+        UniqueConstraint('patient_id', 'disease_id',
+                        name='unique_patient_disease'),
+    )
 
 
 # =============================================================================
@@ -534,7 +638,7 @@ class SharedMedicalCase(Base):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     original_case_id = Column(UUID(as_uuid=True), ForeignKey("medical_cases.id"),
-                             nullable=False, unique=True)
+                             nullable=False, unique=True, index=True)
     consent_id = Column(UUID(as_uuid=True), ForeignKey("data_sharing_consents.id"),
                        nullable=False)
     
