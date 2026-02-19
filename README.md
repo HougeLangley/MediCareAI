@@ -340,34 +340,38 @@ MediCareAI/
 │   │   ├── 📁 api/               # API Routes - API 路由
 │   │   │   └── 📁 api_v1/
 │   │   │       ├── 📁 endpoints/ # API Endpoints - API 端点
-│   │   │       │   ├── auth.py           # Authentication - 认证
-│   │   │       │   ├── patients.py       # Patient CRUD - 患者管理
-│   │   │       │   ├── ai.py             # AI Diagnosis - AI 诊断
-│   │   │       │   ├── medical_cases.py  # Medical Records - 医疗记录
-│   │   │       │   ├── documents.py      # File Upload - 文件上传
-│   │   │       │   ├── admin.py          # Admin System - 管理员系统
-│   │   │       │   ├── sharing.py        # Data Sharing - 数据分享
-│   │   │       │   ├── doctor.py         # Doctor Platform - 医生平台
-│   │   │       │   └── vector_embedding.py  # Vector Operations - 向量操作
+│   │   │       │   ├── auth.py                  # Authentication - 认证
+│   │   │       │   ├── patients.py              # Patient CRUD - 患者管理
+│   │   │       │   ├── ai.py                    # AI Diagnosis - AI 诊断
+│   │   │       │   ├── medical_cases.py         # Medical Records - 医疗记录
+│   │   │       │   ├── documents.py             # File Upload - 文件上传
+│   │   │       │   ├── admin.py                 # Admin System - 管理员系统
+│   │   │       │   ├── sharing.py               # Data Sharing - 数据分享
+│   │   │       │   ├── doctor.py                # Doctor Platform - 医生平台
+│   │   │       │   ├── chronic_diseases.py      # Chronic Disease - 慢性病管理
+│   │   │       │   ├── monitoring.py            # System Monitoring - 系统监控
+│   │   │       │   └── vector_embedding.py      # Vector Operations - 向量操作
 │   │   │       └── api.py
 │   │   ├── 📁 core/              # Core Config - 核心配置
 │   │   ├── 📁 models/            # Database Models - 数据库模型 (22 tables)
 │   │   ├── 📁 schemas/           # Pydantic Schemas - 数据验证模式
 │   │   ├── 📁 services/          # Business Logic - 业务逻辑层
-│   │   │   ├── ai_service.py           # AI Diagnosis - AI 诊断
-│   │   │   ├── ai_model_config_service.py  # AI Model Management - AI 模型管理
-│   │   │   ├── kb_vectorization_service.py  # KB Vectorization - 知识库向量化
-│   │   │   ├── unified_kb_service.py   # Unified KB - 统一知识库
-│   │   │   ├── generic_rag_selector.py # Smart RAG - 智能检索
-│   │   │   ├── pii_cleaner_service.py  # PII Cleaning - PII 清洗
-│   │   │   └── oss_service.py          # Alibaba Cloud OSS - 阿里云 OSS
+│   │   │   ├── ai_service.py                  # AI Diagnosis - AI 诊断
+│   │   │   ├── ai_model_config_service.py     # AI Model Management - AI 模型管理
+│   │   │   ├── kb_vectorization_service.py    # KB Vectorization - 知识库向量化
+│   │   │   ├── unified_kb_service.py          # Unified KB - 统一知识库
+│   │   │   ├── vector_embedding_service.py    # Vector Embedding - 向量嵌入服务
+│   │   │   ├── data_sharing_service.py        # Data Sharing - 数据分享服务
+│   │   │   ├── generic_rag_selector.py        # Smart RAG - 智能检索
+│   │   │   ├── pii_cleaner_service.py         # PII Cleaning - PII 清洗
+│   │   │   ├── monitoring_service.py          # System Monitoring - 系统监控
+│   │   │   └── oss_service.py                 # Alibaba Cloud OSS - 阿里云 OSS
 │   │   ├── 📁 db/                # Database - 数据库
 │   │   ├── 📁 utils/             # Utilities - 工具函数
 │   │   └── main.py               # Application Entry - 应用入口
 │   ├── 📁 data/
 │   │   └── 📁 knowledge_bases/   # Knowledge Base - 知识库
-│   │       ├── 📁 unified/       # Unified KB - 统一知识库
-│   │       └── 📁 active/        # Active Configs - 激活配置
+│   │       └── 📁 unified/       # Unified KB - 统一知识库 (扁平化存储)
 │   ├── 📁 tests/                 # Tests - 测试
 │   ├── 📁 uploads/               # Uploads - 上传文件
 │   ├── Dockerfile                # Backend Container - 后端容器
@@ -393,6 +397,12 @@ MediCareAI/
 │   ├── admin-login.html          # Admin Login - 管理员登录
 │   ├── platform-select.html      # Platform Selector - 平台选择
 │   ├── server.py                 # Dev Server - 开发服务器
+│   ├── 📁 js/                    # Shared JavaScript - 共享 JS 模块
+│   │   ├── config.js             # Global Config - 全局配置
+│   │   ├── auth.js               # Auth Module - 认证模块
+│   │   ├── api.js                # API Client - API 客户端
+│   │   ├── utils.js              # Utilities - 工具函数
+│   │   └── monitoring.js         # Monitoring - 监控模块
 │   ├── 📁 src/                   # Source Code - 源代码
 │   │   ├── 📁 components/        # Components - 组件
 │   │   ├── 📁 contexts/          # Contexts - 上下文
@@ -403,7 +413,13 @@ MediCareAI/
 │   └── Dockerfile                # Frontend Container - 前端容器
 ├── 📁 docker/                    # Docker Config - Docker 配置
 │   ├── 📁 nginx/                 # Nginx Configuration - Nginx 配置
-│   └── 📁 postgres/              # PostgreSQL Setup - PostgreSQL 设置
+│   │   └── ssl/                  # SSL Certificates - SSL 证书
+│   ├── 📁 postgres/              # PostgreSQL Setup - PostgreSQL 设置
+│   ├── 📁 grafana/               # Grafana Monitoring - Grafana 监控
+│   │   ├── dashboards/           # Dashboard JSON - 仪表板配置
+│   │   └── provisioning/         # Provisioning Config - 自动配置
+│   └── 📁 prometheus/            # Prometheus Monitoring - Prometheus 监控
+│       └── prometheus.yml        # Prometheus Config - 配置文件
 ├── 📁 docs/                      # Documentation - 文档
 │   ├── DEPLOYMENT.mdx            # Deployment Guide - 部署指南
 │   ├── ARCHITECTURE.mdx          # System Design - 架构设计

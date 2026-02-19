@@ -11,6 +11,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.1.0] - 2026-02-19
+
+### 主要更新 Highlights | Major Updates
+
+#### 🧹 知识库架构清理与优化 (Knowledge Base Architecture Cleanup)
+- **统一知识库架构确认** Unified Knowledge Base Architecture Verified
+  - 删除遗留的 `diseases/` 目录结构（旧版按疾病分类）
+  - 删除5个遗留向量化脚本 (`vectorize_*.py`)
+  - 清理 `active/current.json` 旧版激活标记文件
+  - 确认统一知识库工作流：所有文档存放于 `unified/` 目录
+
+- **知识库工作流验证** Knowledge Base Workflow Verified
+  - 管理端上传 → 保存至 `unified/` → 元数据管理 → 后台向量化
+  - 支持云端向量模型配置 (Qwen/Aliyun/OpenAI API)
+  - 自动生成向量嵌入存储至 PostgreSQL (pgvector)
+  - AI 诊断自动使用 RAG 检索知识库内容
+
+### 删除 Removed
+- `backend/app/data/knowledge_bases/diseases/` - 遗留疾病分类知识库目录
+- `backend/app/data/knowledge_bases/active/current.json` - 旧版激活标记
+- `backend/vectorize_kb.py` - 遗留向量化脚本
+- `backend/vectorize_simple.py` - 遗留向量化脚本
+- `backend/vectorize_kb_direct.py` - 遗留向量化脚本
+- `backend/vectorize_final.py` - 遗留向量化脚本
+- `backend/vectorize_kb_fixed.py` - 遗留向量化脚本
+
+### 技术细节 Technical Details
+- **知识库目录结构**: 
+  - `unified/` - 统一知识库存放目录
+  - `metadata.json` - 文档元数据管理
+- **向量化流程**: 管理端上传 → `_vectorize_knowledge_document()` 后台任务
+- **向量存储**: PostgreSQL + pgvector 扩展
+- **RAG 集成**: AI 诊断自动检索相关知识库内容
+
+---
+
 ## [2.0.9] - 2026-02-19
 
 ### 主要更新 Highlights | Major Updates
