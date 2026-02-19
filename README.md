@@ -311,7 +311,7 @@ docker-compose up -d
 
 **English:**
 - **Frontend**: Vanilla HTML/CSS/JavaScript served by Nginx, three platforms (Patient/Doctor/Admin)
-- **Backend**: FastAPI (Python 3.11) with async SQLAlchemy ORM
+- **Backend**: FastAPI (Python 3.12) with async SQLAlchemy ORM
 - **Database**: PostgreSQL 17 for data persistence
 - **Cache**: Redis 7.4 for session and data caching
 - **AI Engine**: OpenAI-compatible API support with RAG (Retrieval-Augmented Generation)
@@ -321,7 +321,7 @@ docker-compose up -d
 
 **中文:**
 - **前端**: 原生 HTML/CSS/JavaScript，Nginx 提供静态文件服务，三端平台（患者/医生/管理员）
-- **后端**: FastAPI (Python 3.11)，使用异步 SQLAlchemy ORM
+- **后端**: FastAPI (Python 3.12)，使用异步 SQLAlchemy ORM
 - **数据库**: PostgreSQL 17 用于数据持久化
 - **缓存**: Redis 7.4 用于会话和数据缓存
 - **AI 引擎**: 支持 OpenAI 兼容 API，带 RAG（检索增强生成）
