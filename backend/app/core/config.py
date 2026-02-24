@@ -11,8 +11,8 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     """Configuration settings for the MediCare AI application."""
     
-    database_url: str = "postgresql+asyncpg://medicare_user:password@medicare_postgres:5432/medicareai"
-    redis_url: str = "redis://:password@medicare_redis:6379/0"
+    database_url: str = ""
+    redis_url: str = ""
     redis_password: Optional[str] = None
     
     model_config = {
@@ -21,7 +21,7 @@ class Settings(BaseSettings):
         "extra": "allow"
     }
     
-    jwt_secret_key: str = "your-secret-key"
+    jwt_secret_key: str = ""  # Must be set via environment variable
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 30
     jwt_refresh_token_expire_days: int = 7
@@ -30,11 +30,11 @@ class Settings(BaseSettings):
     mineru_api_url: str = "https://mineru.net/api/v4/extract/task"
     
     ai_api_key: str = ""
-    ai_api_url: str = "http://172.30.66.203:8033/v1/"
+    ai_api_url: str = ""
     ai_model_id: str = "unsloth/GLM-4.7-Flash-GGUF:BF16"
     
     # Embedding model settings (Qwen)
-    embedding_api_key: str = ""
+    embedding_api_url: str = ""
     embedding_api_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
     embedding_model_id: str = "text-embedding-v3"
     embedding_dimensions: int = 1024

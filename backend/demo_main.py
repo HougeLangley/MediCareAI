@@ -181,7 +181,7 @@ async def get_patient_details(patient_id: str):
 @app.post("/api/v1/patients")
 async def create_patient(patient: dict):
     """创建患者（仅内存存储）"""
-    patient_id = str(int(time.time()) * 1000 + len(DEMO_MEDICAL_CASES) + 2))
+    patient_id = str(int(time.time()) * 1000 + len(DEMO_MEDICAL_CASES) + 2)
     patient_data = {
         "id": patient_id,
         **patient
@@ -213,18 +213,18 @@ async def ai_diagnose(symptom_data: dict):
             diagnosis = DEMO_DISEASE
             severity = "mild"
             ai_recommendations = "建议做进一步检查。"
+    elif "发热" in symptoms.lower() or "感冒" in symptoms.lower():
+        diagnosis = "上呼吸道感染"
+        severity = "mild"
+        ai_recommendations = "多喝温水，注意休息。"
+    elif "腹泻" in symptoms.lower() or "腹痛" in symptoms.lower():
+        diagnosis = "消化系统问题"
+        severity = "mild"
+        ai_recommendations = "注意饮食卫生。"
     else:
-            diagnosis = "上呼吸道感染",
-            severity = "mild",
-            ai_recommendations = "多喝温水，注意休息。"
-    else:
-        diagnosis = "消化系统问题",
-            severity = "mild",
-            ai_recommendations = "注意饮食卫生。"
-    else:
-            diagnosis = "一般症状",
-            severity = "mild",
-            ai_recommendations = "建议观察。"
+        diagnosis = "一般症状"
+        severity = "mild"
+        ai_recommendations = "建议观察。"
 
     return {
         "diagnosis": diagnosis,
@@ -254,13 +254,13 @@ async def get_health_trends():
     """获取健康趋势"""
     trends = {
         "labels": ["一月", "二月", "三月"],
-        "values": [2, 1, 3]  # 模拟数据
+        "values": [2, 1, 3],  # 模拟数据
         "patients": [5, 3, 4],
-            "cases": [2, 1, 3],
-            "active": [1, 1, 1],
-            "completed": [1, 1, 1]
-        }
+        "cases": [2, 1, 3],
+        "active": [1, 1, 1],
+        "completed": [1, 1, 1]
     }
+
 
     return {
         "trends": trends,
@@ -311,8 +311,8 @@ def create_demo_token():
     """创建演示令牌"""
     payload = {
         "sub": "demo_user",
-        "exp": int(time.time()) + 3600
-    "role": "demo_user"
+        "exp": int(time.time()) + 3600,
+        "role": "demo_user"
     }
     return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
 
@@ -329,4 +329,4 @@ def decode_demo_token(token: str) -> dict:
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn app:app, host="0.0.0.0", port=8000, log_level="info", reload=True)
+    uvicorn.run("app:app", host="0.0.0.0", port=8000, log_level="info", reload=True)

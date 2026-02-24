@@ -78,9 +78,20 @@ apiClient.interceptors.response.use(
           refresh_token: refreshToken,
         });
 
-        const { access_token, refresh_token } = response.data.data as Token;
+        // Enhanced null checking for response data
+        const responseData = response?.data;
+        if (!responseData?.data) {
+          throw new Error('Invalid refresh token response');
+        }
+        
+        const { access_token, refresh_token } = responseData.data as Token;
+        if (!access_token || !refresh_token) {
+          throw new Error('Missing tokens in response');
+        }
+        
         localStorage.setItem(CONFIG.TOKEN_KEY, access_token);
         localStorage.setItem(CONFIG.REFRESH_TOKEN_KEY, refresh_token);
+
 
         if (originalRequest.headers) {
           originalRequest.headers.Authorization = `Bearer ${access_token}`;

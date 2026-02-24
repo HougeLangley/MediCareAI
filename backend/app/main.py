@@ -15,6 +15,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
 from app.api.api_v1.api import api_router
+from app.core.config import settings
+from app.core.monitoring import PrometheusMiddleware, set_app_info
 from app.core.monitoring import PrometheusMiddleware, set_app_info
 
 logging.basicConfig(
@@ -32,13 +34,12 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "*"
-    ],  # In production, restrict to specific domains / 生产环境应限制为特定域名
+    allow_origins=settings.cors_origins,  # Use configured origins
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Platform"],
 )
+
 
 app.add_middleware(
     TrustedHostMiddleware,

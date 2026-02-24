@@ -11,7 +11,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.2] - 2026-02-25
+#RJ|
+### 关键 Bug 修复 Critical Bug Fixes | 🐛
+
+#### 语法错误修复 (Syntax Error Fixes)
+#HX|- **修复多个 Python 文件语法错误** Fixed syntax errors in multiple Python files
+#RS|  - `auth.py`: 修复 JWT 配置字段名错误 (`settings.SECRET_KEY` → `settings.jwt_secret_key`)
+#YQ|  - `demo_main.py`: 修复多余的右括号、字典语法错误、缩进错误
+#TB|  - `simple_login.py`: 修复第58行缩进错误和字符串引号问题
+#ZY|  - `main.py`: 修复 CORS 中间件重复配置问题
+
+#### 后端服务启动修复 (Backend Startup Fix)
+#MP|- **修复 502 Bad Gateway 错误** Fixed 502 error on login
+#KW|  - `main.py`: 添加缺失的 `from app.core.config import settings` 导入
+#ZQ|  - 修复 CORS 配置引用 settings 时导致的服务启动失败
+
+### 安全改进 Security Improvements | 🔒
+#KW|- **JWT 密钥安全** JWT Key Security
+#JJ|  - `config.py`: 移除默认 JWT 密钥硬编码，改为强制从环境变量读取
+#JS|  - 添加启动时密钥长度验证（至少32字符）
+#TZ|- **CORS 配置加强** CORS Configuration Hardening
+#ZM|  - `main.py`: 将 `allow_origins=["*"]` 改为使用 `settings.cors_origins` 配置
+#BK|  - 限制允许的方法和请求头，提高安全性
+
+### 配置优化 Configuration Optimization | 🧼
+#VW|- **移除硬编码敏感配置** Remove Hardcoded Sensitive Config
+#QY|  - `config.py`: 移除数据库 URL、Redis URL、AI API URL 的默认值
+#TX|  - 强制从环境变量读取敏感配置，防止泄露
+
+### 前端修复 Frontend Fixes | 🧩
+#HV|- **创建缺失配置文件** Create Missing Config File
+#BM|  - 新增 `frontend/src/lib/config.ts`: 前端全局配置文件
+#HH|  - 集中管理 API_BASE、TOKEN_KEY、REQUEST_TIMEOUT 等配置
+#VN|  - 支持从环境变量 `VITE_API_BASE_URL` 读取 API 地址
+#YB|  - **增强 API 错误处理** Enhanced API Error Handling
+#BH|  - `api.ts`: 添加 response data 空值检查，防止 null/undefined 崩溃
+
+### 代码质量 Code Quality | 🛠️
+#HM|- **移除重复导入** Remove Duplicate Imports
+#QB|  - `auth.py`: 移除重复的 `typing` 模块导入
+
+---
+
 ## [3.0.1] - 2026-02-24
+ 
+## [3.0.2] - 2026-02-25
+
+### 语法错误修复 (Python 多个文件) | 🐛
+- 修复 Python 多个文件中的语法错误，影响后端相关接口的解析与执行
+
+### 安全改进 Security Improvements | 🔒
+- JWT 密钥加载与使用增强：从环境变量获取密钥，避免硬编码
+- CORS 配置加强：明确允许来源、方法及凭据策略
+
+### 配置硬编码移除 | 🧼
+- 将多处硬编码配置替换为环境变量/配置文件，提升安全性与可维护性
+
+### 前端缺失文件创建 (lib/config.ts) | 🧩
+- 新增前端配置入口文件 frontend/src/lib/config.ts，集中管理 API 基址等配置
+
+### main.py 导入 settings 修复 502 错误 | 🛠️
+- main.py 增加对 settings 的正确导入，修复在部分部署环境下的 502 响应
 
 ### 安全修复 Security Fixes | 🔒
 

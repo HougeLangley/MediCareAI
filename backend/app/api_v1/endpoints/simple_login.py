@@ -54,7 +54,7 @@ async def add_cors_middleware(request: Request, call_next):
         response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
         response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type"
         response.headers["Access-Control-Allow-Credentials"] = "true"
-    response.headers["Access-Control-Max-Age"] = "3600"
+        response.headers["Access-Control-Max-Age"] = "3600"
         return response
 
 # 演示用户
@@ -226,7 +226,7 @@ async def register(request: dict):
         "user": {
             "id": new_user_id,
             "email": email,
-            " "full_name": full_name,
+            "full_name": full_name,
             "is_active": True,
             "is_verified": False
         },

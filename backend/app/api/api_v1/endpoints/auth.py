@@ -7,7 +7,6 @@ from typing import Optional, Dict, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, Dict
 import uuid
 
 from app.db.database import get_db
@@ -165,8 +164,8 @@ async def refresh_token(
         # Verify the refresh token
         payload = jwt.decode(
             request_data.refresh_token,
-            settings.SECRET_KEY,
-            algorithms=[settings.ALGORITHM],
+            settings.jwt_secret_key,
+            algorithms=[settings.jwt_algorithm],
         )
 
         if payload.get("type") != "refresh":
