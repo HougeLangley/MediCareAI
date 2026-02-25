@@ -524,14 +524,25 @@ See [`.env.example`](.env.example) for full configuration template.
 
 ### Core Documentation | 核心文档
 
+#### Getting Started | 入门指南
 - **[📖 README.md](README.md)** - This file / 本文件 (Overview & Quick Start)
 - **[🚀 DEPLOYMENT.mdx](docs/DEPLOYMENT.mdx)** - Detailed deployment guide / 详细部署指南
+- **[🚀 PRODUCTION_DEPLOYMENT.mdx](docs/PRODUCTION_DEPLOYMENT.mdx)** - **⚠️ 生产环境部署指南** / Production deployment checklist & security hardening
+  - 开发环境迁移到生产环境的完整步骤
+  - CORS、SSL/TLS、数据库安全配置
+  - 生产环境安全检查清单
+
+#### System Documentation | 系统文档
 - **[🏗️ ARCHITECTURE.mdx](docs/ARCHITECTURE.mdx)** - System architecture & design / 系统架构与设计
 - **[🔌 API.mdx](docs/API.mdx)** - Complete API reference / 完整 API 参考
+- **[🤖 AI_ASSISTANT.mdx](docs/AI_ASSISTANT.mdx)** - AI assistant context / AI 助手上下文
+
+#### Development & Maintenance | 开发与维护
 - **[🤝 CONTRIBUTING.md](CONTRIBUTING.md)** - Development guidelines / 开发指南
 - **[📝 CHANGELOG.md](CHANGELOG.md)** - Full release history / 完整版本历史
-- **[🤖 AI_ASSISTANT.mdx](docs/AI_ASSISTANT.mdx)** - AI assistant context / AI 助手上下文
 - **[🆘 TROUBLESHOOTING.mdx](docs/TROUBLESHOOTING.mdx)** - Troubleshooting & emergency fixes / 故障排除与应急修复
+- **[🧪 TESTING.mdx](docs/TESTING.mdx)** - Testing guide / 测试指南
+
 
 ### API Endpoints Overview | API 端点概览
 

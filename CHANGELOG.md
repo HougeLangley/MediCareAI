@@ -11,6 +11,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.3] - 2026-02-25
+
+### 关键修复 Critical Fixes | 🐛
+
+#### CORS 配置修复
+- **修复开发环境 CORS 问题** Fixed CORS issues in development
+  - 简化 `main.py` CORS 配置，直接允许所有源 `allow_origins=["*"]`
+  - 修复开发环境跨域请求被阻止的问题
+  - 前端管理员端和患者端登录正常工作
+
+#### 前端配置修复
+- **修复前端缺失配置文件** Fixed missing frontend config file
+  - 创建 `frontend/src/lib/config.ts`: 前端全局配置文件
+  - 集中管理 API_BASE、TOKEN_KEY、REQUEST_TIMEOUT 等配置
+  - 修复构建错误：`Failed to resolve import "../../lib/config"`
+
+#### Git 配置修复
+- **修复 Git 忽略规则** Fixed Git ignore rules
+  - 更新 `.gitignore`: 添加 `!frontend/src/lib/` 例外规则
+  - 解决 `lib/` 规则意外忽略前端配置文件的问题
+
+### 文档更新 Documentation Updates | 📝
+
+#### 新增生产环境部署指南
+- **创建 `docs/PRODUCTION_DEPLOYMENT.mdx`**: 完整的生产环境部署指南
+  - 当前项目状态分析（开发环境配置）
+  - 生产环境安全检查清单
+  - CORS、SSL/TLS、数据库详细配置步骤
+  - 8 步部署流程和验证检查清单
+  - 故障排除指南
+
+### 其他更改 Other Changes | 🔧
+
+- **代码清理** Code cleanup
+  - 删除重复的 CORS 中间件配置
+  - 清理 `main.py` 空行和重复代码
+  - 移除 `BUGFIX_REPORT.md` 临时文档
+
+---
+
 ## [3.0.2] - 2026-02-25
 #RJ|
 ### 关键 Bug 修复 Critical Bug Fixes | 🐛
