@@ -43,6 +43,7 @@ import AdminKnowledgeBase from './pages/admin/KnowledgeBase';
 import AdminAIModels from './pages/admin/AIModels';
 import AdminLogs from './pages/admin/Logs';
 import AdminMessages from './pages/admin/Messages';
+import EmailConfig from './pages/admin/EmailConfig';
 
 const theme = createTheme({
   palette: {
@@ -142,6 +143,7 @@ function App() {
                       <Route path="ai-models" element={<AdminAIModels />} />
                       <Route path="messages" element={<AdminMessages />} />
                       <Route path="logs" element={<AdminLogs />} />
+                      <Route path="email-config" element={<EmailConfig />} />
                     </Route>
                   </Route>
 

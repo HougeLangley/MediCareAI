@@ -552,3 +552,5 @@ export interface AIModelConfigs {
   embedding: AIModelConfig;
   oss: AIModelConfig;
 }
+// Email Configuration Types
+export * from "./email";

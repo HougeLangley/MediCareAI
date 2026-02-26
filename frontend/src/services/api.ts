@@ -563,6 +563,37 @@ export const adminApi = {
     formatted_url: string;
   }>('/admin/embedding/validate-url', { url }),
   changePassword: (current_password: string, new_password: string) =>
+  // Email Provider APIs
+  getEmailProviderPresets: () => api.get<{
+    providers: EmailProviderPreset[];
+    categories: Record<string, ProviderCategory>;
+  }>(""/admin/email-providers/presets"),
+
+  getEmailProviderPreset: (providerId: string) => api.get<EmailProviderPreset>(`"/admin/email-providers/presets/${providerId}"`),
+
+  // Email Config APIs
+  getEmailConfigs: () => api.get<{ configs: EmailConfig[]; total: number }>(""/admin/email-config/configs"),
+
+  createEmailConfig: (data: EmailConfigCreate) => api.post<EmailConfig>(""/admin/email-config/configs"),
+
+  updateEmailConfig: (id: string, data: EmailConfigUpdate) => api.put<EmailConfig>(`"/admin/email-config/configs/${id}"`),
+
+  deleteEmailConfig: (id: string) => api.delete<void>(`"/admin/email-config/configs/${id}"`),
+
+  testEmailConfig: (id: string, testEmail: string) => api.post<{ success: boolean; message: string }>(`"/admin/email-config/configs/${id}/test"`, { test_email: testEmail }),
+
+  setDefaultEmailConfig: (id: string) => api.post<EmailConfig>(`"/admin/email-config/configs/${id}/set-default"`),
+
+  getEmailServiceStatus: () => api.get<{
+    is_available: boolean;
+    config_source: string;
+    smtp_host?: string;
+    smtp_port?: number;
+    smtp_user?: string;
+    from_email?: string;
+    from_name?: string;
+    use_tls?: boolean;
+  }>(""/admin/email-config/status"),
     api.post<void>('/admin/change-password', { current_password, new_password }),
 };
 

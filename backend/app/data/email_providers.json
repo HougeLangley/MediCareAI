@@ -1,0 +1,200 @@
+{
+  "$schema": "email-providers-schema",
+  "version": "1.0.0",
+  "description": "预设邮箱服务商配置 | Preset Email Provider Configurations",
+  "providers": [
+    {
+      "id": "qq",
+      "name": "QQ邮箱",
+      "category": "domestic",
+      "categoryLabel": "国内主流",
+      "icon": "📮",
+      "description": "腾讯QQ邮箱，适合国内用户",
+      "smtp": {
+        "host": "smtp.qq.com",
+        "port": 465,
+        "useTLS": true,
+        "useSSL": true
+      },
+      "helpText": "请使用QQ邮箱授权码（不是QQ密码）",
+      "helpLink": "https://mail.qq.com"
+    },
+    {
+      "id": "qq-enterprise",
+      "name": "腾讯企业邮",
+      "category": "domestic",
+      "categoryLabel": "国内主流",
+      "icon": "🏢",
+      "description": "腾讯企业邮箱，适合企业用户",
+      "smtp": {
+        "host": "smtp.exmail.qq.com",
+        "port": 465,
+        "useTLS": true,
+        "useSSL": true
+      },
+      "helpText": "使用企业邮箱账号和密码",
+      "helpLink": "https://exmail.qq.com"
+    },
+    {
+      "id": "163",
+      "name": "163邮箱",
+      "category": "domestic",
+      "categoryLabel": "国内主流",
+      "icon": "📧",
+      "description": "网易163邮箱",
+      "smtp": {
+        "host": "smtp.163.com",
+        "port": 465,
+        "useTLS": true,
+        "useSSL": true
+      },
+      "helpText": "请使用163邮箱授权码",
+      "helpLink": "https://mail.163.com"
+    },
+    {
+      "id": "126",
+      "name": "126邮箱",
+      "category": "domestic",
+      "categoryLabel": "国内主流",
+      "icon": "📧",
+      "description": "网易126邮箱",
+      "smtp": {
+        "host": "smtp.126.com",
+        "port": 465,
+        "useTLS": true,
+        "useSSL": true
+      },
+      "helpText": "请使用126邮箱授权码",
+      "helpLink": "https://mail.126.com"
+    },
+    {
+      "id": "aliyun",
+      "name": "阿里邮箱",
+      "category": "domestic",
+      "categoryLabel": "国内主流",
+      "icon": "☁️",
+      "description": "阿里云企业邮箱",
+      "smtp": {
+        "host": "smtp.aliyun.com",
+        "port": 465,
+        "useTLS": true,
+        "useSSL": true
+      },
+      "helpText": "使用阿里邮箱账号和密码",
+      "helpLink": "https://mail.aliyun.com"
+    },
+    {
+      "id": "sina",
+      "name": "新浪邮箱",
+      "category": "domestic",
+      "categoryLabel": "国内主流",
+      "icon": "📨",
+      "description": "新浪免费邮箱",
+      "smtp": {
+        "host": "smtp.sina.com",
+        "port": 587,
+        "useTLS": true,
+        "useSSL": false
+      },
+      "helpText": "使用新浪邮箱账号和密码",
+      "helpLink": "https://mail.sina.com.cn"
+    },
+    {
+      "id": "gmail",
+      "name": "Gmail",
+      "category": "international",
+      "categoryLabel": "国际服务",
+      "icon": "🌍",
+      "description": "Google Gmail，适合海外用户",
+      "smtp": {
+        "host": "smtp.gmail.com",
+        "port": 587,
+        "useTLS": true,
+        "useSSL": false
+      },
+      "helpText": "需要使用应用专用密码（App Password）",
+      "helpLink": "https://myaccount.google.com/apppasswords"
+    },
+    {
+      "id": "outlook",
+      "name": "Outlook/Hotmail",
+      "category": "international",
+      "categoryLabel": "国际服务",
+      "icon": "📧",
+      "description": "微软Outlook邮箱",
+      "smtp": {
+        "host": "smtp-mail.outlook.com",
+        "port": 587,
+        "useTLS": true,
+        "useSSL": false
+      },
+      "helpText": "使用Outlook账号和密码",
+      "helpLink": "https://outlook.live.com"
+    },
+    {
+      "id": "yahoo",
+      "name": "Yahoo Mail",
+      "category": "international",
+      "categoryLabel": "国际服务",
+      "icon": "🌐",
+      "description": "Yahoo邮箱",
+      "smtp": {
+        "host": "smtp.mail.yahoo.com",
+        "port": 587,
+        "useTLS": true,
+        "useSSL": false
+      },
+      "helpText": "需要生成应用密码",
+      "helpLink": "https://login.yahoo.com"
+    },
+    {
+      "id": "icloud",
+      "name": "iCloud Mail",
+      "category": "international",
+      "categoryLabel": "国际服务",
+      "icon": "🍎",
+      "description": "Apple iCloud邮箱",
+      "smtp": {
+        "host": "smtp.mail.me.com",
+        "port": 587,
+        "useTLS": true,
+        "useSSL": false
+      },
+      "helpText": "使用Apple ID应用专用密码",
+      "helpLink": "https://appleid.apple.com"
+    },
+    {
+      "id": "custom",
+      "name": "自定义配置",
+      "category": "custom",
+      "categoryLabel": "高级选项",
+      "icon": "⚙️",
+      "description": "手动配置SMTP服务器",
+      "smtp": {
+        "host": "",
+        "port": 587,
+        "useTLS": true,
+        "useSSL": false
+      },
+      "helpText": "请填写您的SMTP服务器信息",
+      "helpLink": null
+    }
+  ],
+  "categories": {
+    "domestic": {
+      "label": "国内主流",
+      "description": "适合国内用户，速度快",
+      "icon": "🇨🇳"
+    },
+    "international": {
+      "label": "国际服务",
+      "description": "适合海外用户或国际业务",
+      "icon": "🌐"
+    },
+    "custom": {
+      "label": "高级选项",
+      "description": "自定义SMTP配置",
+      "icon": "⚙️"
+    }
+  }
+}

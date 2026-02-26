@@ -60,6 +60,7 @@ const AdminLayout: React.FC = () => {
     { path: '/admin/knowledge-base', label: '知识库配置', icon: <School /> },
     { path: '/admin/doctors', label: '医生认证系统', icon: <People /> },
     { path: '/admin/messages', label: '站内信', icon: <Email /> },
+    { path: '/admin/email-config', label: '邮件服务配置', icon: <Email /> },
     { path: '/admin/logs', label: '审计日志', icon: <Article /> },
   ];
 

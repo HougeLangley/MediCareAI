@@ -14,6 +14,7 @@ from app.api.api_v1.endpoints import (
     monitoring,
     messages,
     email_config,
+    email_providers,
 )
 from app.services.knowledge_base_service import router as knowledge_router
 
@@ -61,6 +62,11 @@ api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 # 邮件配置路由 (Admin only)
 api_router.include_router(
     email_config.router, prefix="/admin/email-config", tags=["email-configuration"]
+)
+
+# 邮箱服务商预设路由 (Admin only)
+api_router.include_router(
+    email_providers.router, prefix="/admin/email-providers", tags=["email-providers"]
 )
 
 # 监控指标路由
