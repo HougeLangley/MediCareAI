@@ -107,6 +107,34 @@ class User(Base):
     is_verified = Column(
         Boolean, default=False, comment="Email verification status / 邮箱验证状态"
     )
+    
+    # Email Verification Fields | 邮箱验证字段
+    email_verification_token = Column(
+        String(255), nullable=True, comment="Email verification token / 邮箱验证令牌"
+    )
+    email_verification_sent_at = Column(
+        DateTime(timezone=True), nullable=True, comment="Email verification sent time / 验证邮件发送时间"
+    )
+    email_verified_at = Column(
+        DateTime(timezone=True), nullable=True, comment="Email verified time / 邮箱验证完成时间"
+    )
+    
+    # Password Reset Fields | 密码重置字段
+    password_reset_token = Column(
+        String(255), nullable=True, comment="Password reset token / 密码重置令牌"
+    )
+    password_reset_sent_at = Column(
+        DateTime(timezone=True), nullable=True, comment="Password reset sent time / 重置邮件发送时间"
+    )
+
+    # =============================================================================
+    # Patient-Specific Fields (nullable for doctors/admins) | 患者特有字段
+    # =============================================================================
+    date_of_birth = Column(
+        Date, nullable=True, comment="[Patient] Date of birth / [患者] 出生日期"
+    )
+
+    # =============================================================================
 
     # =============================================================================
     # Patient-Specific Fields (nullable for doctors/admins) | 患者特有字段

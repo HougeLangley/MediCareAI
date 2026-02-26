@@ -64,6 +64,20 @@ class Settings(BaseSettings):
     default_page_size: int = 20
     max_page_size: int = 100
     
+    # Email Settings | 邮件设置
+    smtp_host: Optional[str] = None
+    smtp_port: int = 587
+    smtp_user: Optional[str] = None
+    smtp_password: Optional[str] = None
+    smtp_from_email: Optional[str] = None
+    smtp_from_name: str = "MediCareAI"
+    smtp_use_tls: bool = True
+    
+    # Frontend URL for email links | 邮件链接前端地址
+    frontend_url: str = "http://localhost:3000"
+    
+    max_page_size: int = 100
+    
     @field_validator("database_url", mode="before")
     @classmethod
     def validate_database_url(cls, v: str) -> str:

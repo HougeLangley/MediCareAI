@@ -37,6 +37,11 @@ import { useForm, Controller } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { CONFIG } from '../../lib/config';
+import { AddressSelect } from '../../components/common/AddressSelect';
+import type { RegisterData } from '../../types';
+import { useNavigate } from 'react-router-dom';
+import { useAuthContext } from '../../contexts/AuthContext';
+import { CONFIG } from '../../lib/config';
 import type { RegisterData } from '../../types';
 
 const RegisterPage: React.FC = () => {
@@ -59,7 +64,27 @@ const RegisterPage: React.FC = () => {
     setError,
     clearErrors,
     setValue,
-  } = useForm<RegisterData & { confirmPassword: string; emergency_contact_name?: string; emergency_contact_phone?: string }>({
+  } = useForm<RegisterData & { confirmPassword: string; emergency_contact_name?: string; emergency_contact_phone?: string; address?: any }>({
+    defaultValues: {
+      role: 'patient',
+      full_name: '',
+      email: '',
+      password: '',
+      phone: '',
+      gender: '',
+      date_of_birth: '',
+      address: '',
+      emergency_contact_name: '',
+      emergency_contact_phone: '',
+      confirmPassword: '',
+      title: '',
+      department: '',
+      hospital: '',
+      license_number: '',
+      specialty: '',
+      terms: false,
+    },
+  });
     defaultValues: {
       role: 'patient',
       full_name: '',
@@ -97,6 +122,15 @@ const RegisterPage: React.FC = () => {
   }, [clearError]);
 
   const onSubmit = async (data: RegisterData & { confirmPassword: string; emergency_contact_name?: string; emergency_contact_phone?: string }) => {
+    const { confirmPassword, emergency_contact_name, emergency_contact_phone, address, ...registerData } = data;
+
+    // 构建完整地址字符串
+    let fullAddress = '';
+    if (address && typeof address === 'object') {
+      fullAddress = address.fullAddress || '';
+    } else if (typeof address === 'string') {
+      fullAddress = address;
+    }
     const { confirmPassword, emergency_contact_name, emergency_contact_phone, ...registerData } = data;
 
     if (data.role === 'patient' && emergency_contact_name && emergency_contact_phone) {
@@ -407,6 +441,23 @@ const RegisterPage: React.FC = () => {
               </Grid>
 
               <Grid item xs={12}>
+                <Controller
+                  name="address"
+                  control={control}
+                  render={({ field }) => (
+                    <AddressSelect
+                      value={{
+                        province: field.value?.province || '',
+                        city: field.value?.city || '',
+                        district: field.value?.district || '',
+                        detail: field.value?.detail || field.value || '',
+                      }}
+                      onChange={(address) => field.onChange(address.fullAddress)}
+                      disabled={isSubmitting || isLoading}
+                    />
+                  )}
+                />
+              </Grid>
                 <Controller
                   name="address"
                   control={control}
