@@ -142,6 +142,28 @@
    - 使用管理员账户登录
 
 2. **添加SMTP配置**
+
+   **Gmail 配置示例：**
+   ```
+   SMTP服务器: smtp.gmail.com
+   端口: 587
+   用户名: your-email@gmail.com
+   密码: your-app-password
+   发件人邮箱: noreply@medicare.ai
+   发件人名称: MediCareAI
+   使用TLS: 是
+   ```
+
+   **QQ邮箱 配置示例（推荐国内用户）：**
+   ```
+   SMTP服务器: smtp.qq.com
+   端口: 465
+   用户名: your-qq@qq.com
+   密码: 授权码（不是QQ密码！）
+   发件人邮箱: your-qq@qq.com
+   发件人名称: MediCareAI
+   使用TLS: 是
+   ```
    ```
    SMTP服务器: smtp.gmail.com
    端口: 587
@@ -162,6 +184,114 @@
    - 系统立即使用此配置
 
 ---
+
+## 📮 邮件服务商配置指南 | Email Provider Configuration
+
+### QQ邮箱（推荐国内用户）| QQ Mail (Recommended for China)
+
+**QQ邮箱完全支持！** 但需要特殊配置：
+
+#### 配置步骤：
+
+1. **开启SMTP服务**
+   - 登录 QQ邮箱网页版: https://mail.qq.com
+   - 点击"设置" → "账户"
+   - 找到"POP3/IMAP/SMTP/Exchange/CardDAV/CalDAV服务"
+   - 开启"SMTP服务"
+   - 会收到一个**授权码**（16位字符串），请保存好！
+
+2. **在 MediCareAI 中配置**
+   ```
+   SMTP服务器: smtp.qq.com
+   端口: 465（推荐）或 587
+   用户名: your-qq@qq.com
+   密码: 授权码（不是QQ登录密码！）
+   发件人邮箱: your-qq@qq.com
+   发件人名称: MediCareAI
+   使用TLS: 是
+   ```
+
+3. **测试发送**
+   - 点击"测试"按钮
+   - 输入测试邮箱地址（可以是另一个QQ邮箱）
+   - 检查收件箱和垃圾箱
+
+#### QQ邮箱限制：
+- 发件频率限制：每分钟不超过10封
+- 每天发送上限：约100封（新账号可能更低）
+- 必须使用授权码，QQ密码无法通过SMTP验证
+
+#### 常见问题：
+
+**问题1：提示"授权码错误"**
+- 确保使用的是16位授权码，不是QQ密码
+- 重新在QQ邮箱设置中生成新的授权码
+
+**问题2：邮件进入垃圾箱**
+- 这是正常现象，收件人需要添加发件人到白名单
+- 建议在邮件正文中提醒用户检查垃圾箱
+
+**问题3：连接超时**
+- 尝试将端口从587改为465
+- 确保服务器能访问 smtp.qq.com:465
+
+---
+
+### Gmail（推荐海外用户）| Gmail (Recommended for Overseas)
+
+#### 配置步骤：
+
+1. **开启两步验证**
+   - 访问 https://myaccount.google.com/security
+   - 开启"两步验证"
+
+2. **生成应用专用密码**
+   - 在同一页面选择"应用专用密码"
+   - 选择"邮件"应用，设备选择"其他"
+   - 复制生成的16位密码
+
+3. **在 MediCareAI 中配置**
+   ```
+   SMTP服务器: smtp.gmail.com
+   端口: 587
+   用户名: your-email@gmail.com
+   密码: 应用专用密码
+   发件人邮箱: your-email@gmail.com
+   发件人名称: MediCareAI
+   使用TLS: 是
+   ```
+
+#### Gmail限制：
+- 每天发送上限：500封（个人账号）
+- 需要应用专用密码
+- 某些地区可能需要VPN
+
+---
+
+### 163/126邮箱 | NetEase Mail
+
+#### 配置步骤：
+
+1. **开启SMTP服务**
+   - 登录 163邮箱
+   - 设置 → POP3/SMTP/IMAP
+   - 开启SMTP服务
+   - 获取授权码
+
+2. **配置信息**
+   ```
+   SMTP服务器: smtp.163.com
+   端口: 465
+   用户名: your-email@163.com
+   密码: 授权码
+   发件人邮箱: your-email@163.com
+   发件人名称: MediCareAI
+   使用TLS: 是
+   ```
+
+---
+
+## 🔧 故障排除 | Troubleshooting
 
 ## 🔧 故障排除 | Troubleshooting
 

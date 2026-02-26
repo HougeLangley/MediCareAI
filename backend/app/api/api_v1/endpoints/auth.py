@@ -7,7 +7,6 @@ from typing import Optional, Dict, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import BaseModel, EmailStr, Field
-from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime, timedelta
 
 from app.db.database import get_db
@@ -27,7 +26,6 @@ router = APIRouter()
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
     """用户注册 - 创建用户账户和患者档案，返回成功信息（不自动登录）"""
-    from datetime import datetime
     from app.schemas.patient import PatientCreate
     from app.services.patient_service import PatientService
 
@@ -95,74 +93,6 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
         "user_id": str(user.id),
         "email": user.email,
     }
-
-    """用户注册 - 同时创建用户账户和患者档案，并返回登录令牌"""
-    from datetime import datetime
-    from app.schemas.patient import PatientCreate
-    from app.services.patient_service import PatientService
-    from app.core.security import create_token_for_user
-
-    user_service = UserService(db)
-
-    # 1. 创建用户账户
-    user = await user_service.create_user(
-        email=user_data.email,
-        password=user_data.password,
-        full_name=user_data.full_name,
-    )
-
-    # 2. 创建患者档案（如果有提供额外信息）
-    if any(
-        [
-            user_data.date_of_birth,
-            user_data.gender,
-            user_data.phone,
-            user_data.emergency_contact_name,
-            user_data.emergency_contact_phone,
-        ]
-    ):
-        patient_service = PatientService(db)
-
-        # 组合紧急联系人信息
-        emergency_contact = None
-        if user_data.emergency_contact_name or user_data.emergency_contact_phone:
-            name = user_data.emergency_contact_name or ""
-            phone = user_data.emergency_contact_phone or ""
-            emergency_contact = f"{name} {phone}".strip()
-
-        # 转换日期字符串为 date 对象
-        date_of_birth = None
-        if user_data.date_of_birth:
-            try:
-                date_of_birth = datetime.strptime(
-                    user_data.date_of_birth, "%Y-%m-%d"
-                ).date()
-            except ValueError:
-                logger.warning(f"日期格式无效: {user_data.date_of_birth}")
-
-        # 创建患者档案
-        patient_data = PatientCreate(
-            date_of_birth=date_of_birth,
-            gender=user_data.gender,
-            phone=user_data.phone,
-            emergency_contact=emergency_contact if emergency_contact else None,
-        )
-
-        try:
-            await patient_service.create_patient(
-                patient_data=patient_data, user_id=user.id
-            )
-            logger.info(f"患者档案创建成功，用户ID: {user.id}")
-        except Exception as e:
-            # 患者档案创建失败不阻止注册成功
-            logger.warning(f"患者档案创建失败（非阻塞）: {e}")
-
-    # 3. 生成登录令牌（默认平台为 patient）
-    tokens = create_token_for_user(user.id, user.email, user.role, "patient")
-
-    return {"user": user, "tokens": tokens}
-
-
 class LoginRequest(BaseModel):
     """Login request with optional platform parameter / 带可选平台参数的登录请求"""
 
