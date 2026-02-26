@@ -25,6 +25,7 @@ import SymptomSubmit from './pages/patient/SymptomSubmit';
 import MedicalRecords from './pages/patient/MedicalRecords';
 import MedicalRecordDetail from './pages/patient/MedicalRecordDetail';
 import PatientProfile from './pages/patient/Profile';
+import CompleteProfile from './pages/patient/CompleteProfile';
 
 import DoctorLayout from './components/layout/DoctorLayout';
 import DoctorDashboard from './pages/doctor/Dashboard';
@@ -110,6 +111,9 @@ function App() {
                   
                   <Route element={<ProtectedRoute allowedRoles={['patient']} />}>
                     <Route path="/patient" element={<PatientLayout />}>
+                      <Route index element={<PatientDashboard />} />
+                      <Route path="complete-profile" element={<CompleteProfile />} />
+                      <Route path="symptom-submit" element={<SymptomSubmit />} />
                       <Route index element={<PatientDashboard />} />
                       <Route path="symptom-submit" element={<SymptomSubmit />} />
                       <Route path="medical-records" element={<MedicalRecords />} />

@@ -12,6 +12,16 @@ interface AuthContextType {
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
   clearError: () => void;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
+}
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  error: string | null;
+  login: (credentials: LoginCredentials) => Promise<void>;
+  register: (data: RegisterData) => Promise<void>;
+  logout: () => void;
+  clearError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -41,6 +51,39 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const login = async (credentials: LoginCredentials) => {
+    try {
+      setError(null);
+      const response = await authApi.login(credentials);
+      
+      if (!response || !response.tokens || !response.user) {
+        throw new Error('登录响应格式错误');
+      }
+      
+      localStorage.setItem(CONFIG.TOKEN_KEY, response.tokens.access_token);
+      localStorage.setItem(CONFIG.REFRESH_TOKEN_KEY, response.tokens.refresh_token);
+      setUser(response.user);
+      
+      // 检查是否需要引导完善信息（首次登录或信息不完整）
+      const needsProfileCompletion = !response.user.is_verified || 
+        (response.user.role === 'patient' && (!response.user.address || !response.user.phone));
+      
+      if (needsProfileCompletion && response.user.role === 'patient') {
+        // 跳转到完善信息页面
+        window.location.href = '/patient/complete-profile';
+      } else {
+        const roleRoutes: { [key: string]: string } = {
+          patient: '/patient',
+          doctor: '/doctor',
+          admin: '/admin',
+        };
+        window.location.href = roleRoutes[response.user.role] || '/';
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : '登录失败');
+      setError(err.message || '登录失败');
+      throw err;
+    }
+  };
     try {
       setError(null);
       const response = await authApi.login(credentials);
@@ -102,6 +145,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        isLoading,
+        error,
+        login,
+        register,
+        logout,
+        clearError,
+        setUser,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};
     <AuthContext.Provider
       value={{
         user,

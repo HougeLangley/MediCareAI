@@ -7,7 +7,8 @@ from typing import Optional, Dict, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import BaseModel, EmailStr, Field
-import uuid
+from pydantic import BaseModel, EmailStr, Field
+from datetime import datetime, timedelta
 
 from app.db.database import get_db
 from app.schemas.user import UserLogin, UserCreate, UserResponse, UserUpdate
@@ -94,7 +95,7 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
         "user_id": str(user.id),
         "email": user.email,
     }
-async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
+
     """用户注册 - 同时创建用户账户和患者档案，并返回登录令牌"""
     from datetime import datetime
     from app.schemas.patient import PatientCreate
@@ -815,3 +816,211 @@ async def get_pending_doctors(
         }
         for doctor in pending_doctors
     ]
+
+
+
+# =============================================================================
+# Email Verification Endpoints | 邮箱验证端点
+# =============================================================================
+
+@router.post("/send-verification-email")
+async def send_verification_email(
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    发送邮箱验证邮件 | Send Email Verification
+    
+    - 生成验证token并发送到用户邮箱
+    - 限制发送频率（1分钟内只能发送一次）
+    """
+    from app.services.email_service import temail_service
+    from app.core.config import settings
+    
+    # 检查是否已经验证
+    if current_user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="邮箱已经验证 / Email already verified"
+        )
+    
+    # 检查发送频率限制（1分钟内只能发送一次）
+    if current_user.email_verification_sent_at:
+        time_since_last_send = datetime.utcnow() - current_user.email_verification_sent_at
+        if time_since_last_send < timedelta(minutes=1):
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="发送太频繁，请1分钟后再试 / Too frequent, please try again in 1 minute"
+            )
+    
+    # 构建验证链接基础URL
+    base_url = settings.frontend_url
+    
+    # 发送验证邮件
+    token = await temail_service.send_verification_email(db, current_user, base_url)
+    
+    if token:
+        return {
+            "message": "验证邮件已发送 / Verification email sent",
+            "email": current_user.email,
+        }
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="邮件发送失败，请稍后重试 / Failed to send email, please try again later"
+        )
+
+
+@router.get("/verify-email")
+async def verify_email(
+    token: str,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    验证邮箱 | Verify Email
+    
+    - 通过token验证用户邮箱
+    - token有效期为24小时
+    """
+    from sqlalchemy import select
+    
+    # 查找用户
+    stmt = select(User).where(User.email_verification_token == token)
+    result = await db.execute(stmt)
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="无效的验证链接 / Invalid verification link"
+        )
+    
+    # 检查token是否过期（24小时）
+    if user.email_verification_sent_at:
+        time_since_sent = datetime.utcnow() - user.email_verification_sent_at
+        if time_since_sent > timedelta(hours=24):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="验证链接已过期，请重新发送 / Verification link expired, please resend"
+            )
+    
+    # 更新用户验证状态
+    user.is_verified = True
+    user.email_verified_at = datetime.utcnow()
+    user.email_verification_token = None
+    
+    await db.commit()
+    
+    return {
+        "message": "邮箱验证成功 / Email verified successfully",
+        "email": user.email,
+    }
+
+
+@router.post("/forgot-password")
+async def forgot_password(
+    email: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    请求密码重置 | Request Password Reset
+    
+    - 发送密码重置邮件到用户邮箱
+    - 无论邮箱是否存在都返回成功（防止邮箱枚举攻击）
+    """
+    from sqlalchemy import select
+    from app.services.email_service import temail_service
+    from app.core.config import settings
+    
+    # 查找用户
+    stmt = select(User).where(User.email == email)
+    result = await db.execute(stmt)
+    user = result.scalar_one_or_none()
+    
+    # 即使用户不存在也返回成功（防止邮箱枚举攻击）
+    if not user:
+        return {
+            "message": "如果该邮箱存在，重置邮件已发送 / If the email exists, reset email has been sent"
+        }
+    
+    # 检查发送频率限制（5分钟内只能发送一次）
+    if user.password_reset_sent_at:
+        time_since_last_send = datetime.utcnow() - user.password_reset_sent_at
+        if time_since_last_send < timedelta(minutes=5):
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="发送太频繁，请5分钟后再试 / Too frequent, please try again in 5 minutes"
+            )
+    
+    # 构建重置链接基础URL
+    base_url = settings.frontend_url
+    
+    # 发送重置邮件
+    token = await temail_service.send_password_reset_email(db, user, base_url)
+    
+    if token:
+        return {
+            "message": "重置邮件已发送 / Reset email sent",
+            "email": email,
+        }
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="邮件发送失败，请稍后重试 / Failed to send email, please try again later"
+        )
+
+
+@router.post("/reset-password")
+async def reset_password(
+    token: str,
+    new_password: str,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    重置密码 | Reset Password
+    
+    - 通过token重置用户密码
+    - token有效期为1小时
+    """
+    from sqlalchemy import select
+    from app.core.security import get_password_hash
+    
+    # 查找用户
+    stmt = select(User).where(User.password_reset_token == token)
+    result = await db.execute(stmt)
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="无效的重置链接 / Invalid reset link"
+        )
+    
+    # 检查token是否过期（1小时）
+    if user.password_reset_sent_at:
+        time_since_sent = datetime.utcnow() - user.password_reset_sent_at
+        if time_since_sent > timedelta(hours=1):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="重置链接已过期，请重新请求 / Reset link expired, please request again"
+            )
+    
+    # 验证密码长度
+    if len(new_password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="密码长度至少为6个字符 / Password must be at least 6 characters"
+        )
+    
+    # 更新密码
+    user.password_hash = get_password_hash(new_password)
+    user.password_reset_token = None
+    user.password_reset_sent_at = None
+    
+    await db.commit()
+    
+    return {
+        "message": "密码重置成功 / Password reset successfully",
+    }
