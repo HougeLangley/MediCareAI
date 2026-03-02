@@ -753,9 +753,40 @@ copies or substantial portions of the Software.
 - **Issues**: [GitHub Issues](https://github.com/yourusername/MediCareAI/issues)
 - **Documentation**: [Full Documentation](docs/)
 - **Email**: hougelangley1987@gmail.com
-
 ---
 
+## ☕ 支持作者 | Support the Author
+
+<p align="center">
+  <strong>如果这个项目对您有帮助，欢迎请我喝杯咖啡 ☕</strong><br>
+  <strong>If this project helps you, consider buying me a coffee ☕</strong>
+</p>
+
+<p align="center">
+  作为一名独立开发者，我投入了大量时间和精力来开发和维护这个项目。<br>
+  MediCareAI 将始终<strong>免费开源</strong>，让每个人都能享受到 AI 带来的医疗便利。<br><br>
+  您的每一份支持，都能帮助这个项目持续改进：
+</p>
+
+<p align="center">
+  ✨ 支付服务器和 API 调用成本<br>
+  ✨ 开发更多实用功能<br>
+  ✨ 保持项目的长期维护与更新
+</p>
+
+<p align="center">
+  <strong>无论金额大小，都是对我莫大的鼓励，谢谢！🙏</strong><br>
+  <strong>Every donation, no matter how small, means a lot. Thank you! 🙏</strong>
+</p>
+
+<p align="center">
+  <img src="qrcode.png" alt="微信收款码 | WeChat Pay" width="280">
+</p>
+
+<p align="center">
+  <sub>微信扫码支持 | Scan with WeChat to support</sub>
+</p>
+---
 <p align="center">
   <b>MediCareAI</b> - Empowering Healthcare with AI / 用 AI 赋能医疗健康
 </p>
