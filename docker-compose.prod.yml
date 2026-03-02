@@ -1,93 +1,142 @@
-version: '3.8'
-
-# 生产环境 Docker Compose 配置
-# 特点：
-# 1. Nginx 直接服务静态文件（无需 frontend 容器）
-# 2. 更适合网络受限环境
-# 3. 更少的资源占用
-# 4. 启动速度更快
+# Docker Compose Configuration for Production
+# 生产环境配置文件
+#
+# 使用方法 | Usage:
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# 与开发环境的区别 | Differences from development:
+#   - 前端不使用 volume 挂载（避免覆盖构建的 dist 目录）
+#   - 后端使用生产级配置（4工作进程）
+#   - 启用 HTTPS/SSL
 
 services:
-  # Nginx 反向代理 + 静态文件服务
-  nginx:
+  # PostgreSQL数据库
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: medicare_postgres
+    environment:
+      POSTGRES_DB: medicareai
+      POSTGRES_USER: medicare_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-medicare123456}
     volumes:
-      # 使用静态文件配置
-      - ./docker/nginx/nginx-static.conf:/etc/nginx/nginx.conf:ro
-      # 前端静态文件
-      - ./frontend:/usr/share/nginx/html:ro
-    depends_on:
-      - backend
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "127.0.0.1:5432:5432"  # 仅本地访问
     networks:
       - medicare_network
-    restart: unless-stopped
+    restart: always
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-
-  # 后端 API（生产优化）
-  backend:
-    # 生产环境：多 worker，无热重载
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
-    environment:
-      # 生产环境关闭调试
-      DEBUG: "false"
-      # 启用 Gunicorn（生产服务器）
-      WEB_CONCURRENCY: 4
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '2'
-          memory: 2G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-
-  # PostgreSQL（生产优化）
-  postgres:
-    environment:
-      # 生产环境密码（部署前修改！）
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-medicare_secure_password_2026}
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U medicare_user -d medicare_ai"]
+      test: ["CMD-SHELL", "pg_isready -U medicare_user -d medicareai"]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 60s
 
-  # Redis（生产优化）
+  # Redis缓存
   redis:
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 512M
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
+    image: redis:7.4-alpine
+    container_name: medicare_redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis123456}
+    ports:
+      - "127.0.0.1:6379:6379"  # 仅本地访问
+    volumes:
+      - redis_data:/data
+    networks:
+      - medicare_network
+    restart: always
 
-# 不使用 frontend 容器（生产环境）
-# frontend 服务已在基础 docker-compose.yml 中定义
-# 此配置文件覆盖 nginx 配置即可
+  # 后端API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        - USE_CN_MIRROR=${USE_CN_MIRROR:-false}
+    container_name: medicare_backend
+    command: ["--workers", "4"]
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://medicare_user:${POSTGRES_PASSWORD:-medicare123456}@medicare_postgres:5432/medicareai
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis123456}@medicare_redis:6379/0
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      MINERU_TOKEN: ${MINERU_TOKEN}
+      AI_API_KEY: ${AI_API_KEY}
+      AI_API_URL: ${AI_API_URL}
+      DEBUG: "false"
+      POSTGRES_HOST: medicare_postgres
+      POSTGRES_USER: medicare_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-medicare123456}
+      POSTGRES_DB: medicareai
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./.env:/app/.env
+      - uploads_data:/app/uploads
+      - kb_data:/app/data/knowledge_bases
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - medicare_network
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
 
-# 注意：部署前请确保：
-# 1. 修改默认密码
-# 2. 配置 SSL 证书
-# 3. 设置正确的 AI_API_URL
-# 4. 配置防火墙规则
+  # 前端应用 - 生产环境（不使用 volume 挂载）
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: medicare_frontend
+    environment:
+      - CHOKIDAR_USE_POLLING=true
+      - ESLINT_NO_CACHE=true
+    ports:
+      - "0.0.0.0:3000:3000"
+    # 重要：生产环境不使用 volumes，避免覆盖构建的 dist 目录
+    # volumes:
+    #   - ./frontend:/app
+    #   - frontend_node_modules:/app/node_modules
+    networks:
+      - medicare_network
+    restart: unless-stopped
+
+  # Nginx反向代理
+  nginx:
+    build:
+      context: ./docker/nginx
+      dockerfile: Dockerfile
+    container_name: medicare_nginx
+    ports:
+      - "0.0.0.0:80:80"
+      - "0.0.0.0:443:443"
+      - "0.0.0.0:8080:8080"
+      - "0.0.0.0:8081:8081"
+      - "0.0.0.0:8443:8443"
+      - "0.0.0.0:8444:8444"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./docker/nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - medicare_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  uploads_data:
+  kb_data:
+  # 生产环境不需要 frontend_node_modules volume
+
+networks:
+  medicare_network:
+    driver: bridge

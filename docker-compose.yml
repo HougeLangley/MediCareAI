@@ -84,7 +84,9 @@ services:
       - 8.8.8.8
       - 8.8.4.4
 
-  # 前端应用
+  # 前端应用 - 开发环境配置
+  # 注意：使用 volumes 挂载源代码，支持热重载（HMR）
+  # 生产环境请使用 docker-compose.prod.yml
   frontend:
     build:
       context: ./frontend
