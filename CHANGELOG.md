@@ -11,6 +11,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.1.2] - 2026-03-03
+
+### Bug 修复 Bug Fixes | 🐛
+
+#### 医生注册流程修复 (Doctor Registration Workflow Fixes)
+
+**1. 审核拒绝邮件通知修复**
+- **问题**: 管理员审核拒绝医生时未发送拒绝通知邮件
+- **修复**: 
+  - `email_templates.py`: 新增医生审核拒绝邮件模板 (`DOCTOR_REJECTION_HTML/TEXT`)
+  - `admin.py`: 在 `reject_doctor_verification` 函数中集成邮件发送逻辑
+  - 医生现在会收到包含拒绝原因的邮件通知
+
+**2. 被拒绝医生重新注册修复**
+- **问题**: 医生审核被拒绝后，无法使用原邮箱重新注册
+- **修复**:
+  - `auth.py`: 修改 `register_doctor` 函数
+  - 检查邮箱是否属于审核被拒绝的医生 (`status == "rejected"`)
+  - 如果是，自动删除旧账号和审核记录，允许重新注册
+  - 同样处理执业证书号的重复检查
+- **改进**: 医生无需更换邮箱即可重新提交正确的注册资料
+
+### 新增功能 Added
+- `backend/app/services/email_templates.py` - 新增医生审核拒绝邮件模板
+
+### 变更 Changed
+- `backend/app/api/api_v1/endpoints/admin.py` - 拒绝审核时发送邮件通知
+- `backend/app/api/api_v1/endpoints/auth.py` - 支持被拒绝医生重新注册
+
+---
+
 ## [3.1.1] - 2026-03-02
 
 ### 关键安全修复 Critical Security Fix | 🔒
