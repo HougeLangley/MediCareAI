@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Initialize default admin account for MediCare AI
+Initialize default admin account for MediCareAI
 创建默认管理员账号
 
 Usage:

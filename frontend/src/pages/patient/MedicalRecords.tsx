@@ -536,7 +536,7 @@ const MedicalRecords: React.FC = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
             <HospitalIcon sx={{ fontSize: 32, mr: 2, color: '#667eea' }} />
             <Typography variant="h5" component="div" sx={{ fontWeight: 'bold', color: '#667eea' }}>
-              MediCare AI
+              MediCareAI
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>

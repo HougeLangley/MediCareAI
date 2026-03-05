@@ -115,7 +115,7 @@ const PlatformSelect: React.FC = () => {
               },
             }}
           >
-            🏥 MediCare AI
+            🏥 MediCareAI
           </Typography>
           <Typography
             variant="h5"
@@ -280,7 +280,7 @@ const PlatformSelect: React.FC = () => {
           }}
         >
           <Typography variant="body2" color="rgba(255, 255, 255, 0.8)">
-            MediCare AI © 2025 | 作者：苏业钦 | MIT License
+            MediCareAI © 2025 | 作者：苏业钦 | MIT License
           </Typography>
           <Typography
             variant="body2"

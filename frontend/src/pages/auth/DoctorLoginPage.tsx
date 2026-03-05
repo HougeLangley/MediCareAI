@@ -123,7 +123,7 @@ const DoctorLoginPage: React.FC = () => {
           <Box textAlign="center" mb={3}>
             <LocalHospital sx={{ fontSize: 48, color: '#11998e', mb: 1 }} />
             <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
-              MediCare AI
+              MediCareAI
             </Typography>
             <Typography variant="subtitle1" color="text.secondary">
               医生登录
@@ -135,7 +135,7 @@ const DoctorLoginPage: React.FC = () => {
                   👨‍⚕️ 医生专业平台
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2, lineHeight: 1.6 }}>
-                  MediCare AI 医生平台为专业医疗工作者提供强大的临床辅助工具，
+                  MediCareAI 医生平台为专业医疗工作者提供强大的临床辅助工具，
                   助力精准诊疗和医学研究。
                 </Typography>
                 <List dense sx={{ py: 0 }}>

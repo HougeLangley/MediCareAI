@@ -174,7 +174,7 @@ const RegisterPage: React.FC = () => {
               注册账户
             </Typography>
             <Typography variant="subtitle1" color="text.secondary">
-              加入 MediCare AI，开始智能诊疗之旅
+              加入 MediCareAI，开始智能诊疗之旅
             </Typography>
           </Box>
 

@@ -1,5 +1,5 @@
 """
-MediCare AI Main Application | MediCare AI 主应用程序
+MediCareAI Main Application | MediCareAI 主应用程序
 Intelligent Disease Management System - FastAPI Entry Point | 智能疾病管理系统 - FastAPI 主入口
 """
 

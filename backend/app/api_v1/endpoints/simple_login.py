@@ -1,5 +1,5 @@
 """
-MediCare AI - 简化用户认证（不使用JWT）
+MediCareAI - 简化用户认证（不使用JWT）
 """
 from fastapi import FastAPI, Request, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -67,7 +67,7 @@ DEMO_USER = {
 @app.get("/")
 async def root():
     return {
-        "message": "MediCare AI - 患者端",
+        "message": "MediCareAI - 患者端",
         "version": "1.0.0",
         "status": "running",
         "demo_user": {

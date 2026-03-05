@@ -126,7 +126,7 @@ const LoginPage: React.FC = () => {
           <Box sx={{ textAlign: 'center', mb: 4 }}>
             <LocalHospital sx={{ fontSize: 64, color: '#667eea', mb: 2 }} />
             <Typography variant="h4" component="h1" fontWeight="bold" color="primary" gutterBottom>
-              MediCare AI
+              MediCareAI
             </Typography>
             <Typography variant="subtitle1" color="text.secondary">
               智能疾病管理系统
@@ -135,10 +135,10 @@ const LoginPage: React.FC = () => {
             <Card sx={{ mt: 3, mb: 2, bgcolor: '#f8f9fa' }}>
               <CardContent sx={{ py: 2 }}>
                 <Typography variant="h6" color="primary" gutterBottom>
-                  📋 关于 MediCare AI
+                  📋 关于 MediCareAI
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
-                  MediCare AI 是一个依托人工智能技术实现的专业疾病管理系统。系统旨在对患者疾病进行定期随访和智能管理，
+                  MediCareAI 是一个依托人工智能技术实现的专业疾病管理系统。系统旨在对患者疾病进行定期随访和智能管理，
                   集成 MinerU 文档抽取和 AI 大语言模型，为医疗工作者提供强大的辅助诊断和治疗建议。
                   支持全科室疾病管理，包括内科、外科、儿科、妇科等多个专业领域。
                 </Typography>

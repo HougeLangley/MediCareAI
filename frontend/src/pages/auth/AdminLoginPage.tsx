@@ -123,7 +123,7 @@ const AdminLoginPage: React.FC = () => {
           <Box textAlign="center" mb={3}>
             <Settings sx={{ fontSize: 48, color: '#fc4a1a', mb: 1 }} />
             <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
-              MediCare AI
+              MediCareAI
             </Typography>
             <Typography variant="subtitle1" color="text.secondary">
               管理员登录
@@ -135,7 +135,7 @@ const AdminLoginPage: React.FC = () => {
                   🔐 管理员专属平台
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2, lineHeight: 1.6 }}>
-                  管理平台是 MediCare AI 系统的核心控制中心，管理员肩负着系统安全、
+                  管理平台是 MediCareAI 系统的核心控制中心，管理员肩负着系统安全、
                   数据保护和平台运维的重要职责。
                 </Typography>
                 <List dense sx={{ py: 0 }}>

@@ -1,5 +1,5 @@
 """
-极简版 MediCare AI - 演示版本
+极简版 MediCareAI - 演示版本
 只提供演示账号的静态数据
 """
 from fastapi import FastAPI
@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from datetime import datetime, timedelta
 
-app = FastAPI(title="MediCare AI - Demo")
+app = FastAPI(title="MediCareAI - Demo")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

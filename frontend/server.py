@@ -15,7 +15,7 @@ BACKEND_URL = os.getenv('BACKEND_URL', 'http://backend:8000')
 LOG_FILE = os.getenv('LOG_FILE', 'frontend.log')
 
 class MediCareHandler(http.server.SimpleHTTPRequestHandler):
-    """MediCare AI 请求处理器"""
+    """MediCareAI 请求处理器"""
     
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
@@ -88,7 +88,7 @@ def run_server():
     
     local_ip = get_server_ip()
     
-    log_with_timestamp(f"MediCare AI 前端服务启动中...")
+    log_with_timestamp(f"MediCareAI 前端服务启动中...")
     log_with_timestamp(f"监听地址: {HOST}:{PORT}")
     log_with_timestamp(f"服务器IP: {local_ip}")
     log_with_timestamp(f"后端API: {BACKEND_URL}")
@@ -100,7 +100,7 @@ def run_server():
         log_with_timestamp(f"HTTP 服务器启动成功！")
         
         print(f"\n{'='*80}")
-        print(f"MediCare AI 前端服务已启动")
+        print(f"MediCareAI 前端服务已启动")
         print(f"访问地址：")
         print(f"  http://127.0.0.1:3000")
         print(f"  http://{local_ip}:3000")

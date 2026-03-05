@@ -2,7 +2,7 @@
 # Arch Linux Android 开发环境安装脚本
 #  MediCare_AI Mobile App 开发准备
 
-echo "=== MediCare AI - Android 开发环境安装 ==="
+echo "=== MediCareAI - Android 开发环境安装 ==="
 echo ""
 
 # 颜色定义

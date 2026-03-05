@@ -349,7 +349,7 @@ const MedicalRecordDetail: React.FC = () => {
             </IconButton>
             <HospitalIcon sx={{ fontSize: 32, mr: 2, color: '#667eea' }} />
             <Typography variant="h5" component="div" sx={{ fontWeight: 'bold', color: '#667eea' }}>
-              MediCare AI - 诊疗记录详情
+              MediCareAI - 诊疗记录详情
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>

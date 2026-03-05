@@ -93,7 +93,7 @@ const Dashboard: React.FC = () => {
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                 <HospitalIcon sx={{ fontSize: 28, mr: 1.5, color: 'rgba(255,255,255,0.9)' }} />
                 <Typography variant="h5" sx={{ fontWeight: 'bold', color: 'rgba(255,255,255,0.9)' }}>
-                  MediCare AI
+                  MediCareAI
                 </Typography>
               </Box>
               <Typography variant="h4" component="h1" sx={{ fontWeight: 'light', letterSpacing: 1 }}>
@@ -311,7 +311,7 @@ const Dashboard: React.FC = () => {
         {/* Footer */}
         <Box sx={{ textAlign: 'center', py: 3, mb: 4 }}>
           <Typography variant="body2" color="text.secondary">
-            MediCare AI 使用先进的 AI 技术为您提供智能诊疗建议。
+            MediCareAI 使用先进的 AI 技术为您提供智能诊疗建议。
             <br />
             本系统仅供参考，请以医生的实际诊断为准。
             <br />

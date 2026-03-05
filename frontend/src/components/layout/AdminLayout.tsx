@@ -68,7 +68,7 @@ const AdminLayout: React.FC = () => {
     <Box>
       <Toolbar>
         <Typography variant="h6" noWrap component="div">
-          MediCare AI
+          MediCareAI
         </Typography>
       </Toolbar>
       <Divider />

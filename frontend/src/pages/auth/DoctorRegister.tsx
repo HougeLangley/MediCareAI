@@ -169,7 +169,7 @@ const DoctorRegister: React.FC = () => {
           <Box sx={{ textAlign: 'center', mb: 4 }}>
             <LocalHospital sx={{ fontSize: 64, color: '#11998e', mb: 2 }} />
             <Typography variant="h4" component="h1" fontWeight="bold" sx={{ color: '#11998e' }} gutterBottom>
-              MediCare AI
+              MediCareAI
             </Typography>
             <Typography variant="subtitle1" sx={{ color: '#333' }}>
               医生认证申请 - 加入我们的医疗专家团队

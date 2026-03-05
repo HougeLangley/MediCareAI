@@ -9,7 +9,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    """Configuration settings for the MediCare AI application."""
+    """Configuration settings for the MediCareAI application."""
     
     database_url: str = ""
     redis_url: str = ""

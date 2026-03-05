@@ -1,4 +1,4 @@
-<!-- MediCare AI Logo - SVG Format -->
+<!-- MediCareAI Logo - SVG Format -->
 <svg width="200" height="60" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
   <!-- Background shield shape representing healthcare protection -->
   <path d="M30 5 L50 15 L50 35 Q50 50 30 55 Q10 50 10 35 L10 15 Z" fill="url(#gradient1)" stroke="#667eea" stroke-width="2"/>
