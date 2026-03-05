@@ -84,7 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 文档更新 Documentation
 
 #### 新增文档
-- `PRODUCTION_UPDATE_GUIDE.md` - 生产环境安全更新完整指南
+- `docs/PRODUCTION_UPDATE_GUIDE.mdx` - 生产环境安全更新完整指南
 - `scripts/update-production.sh` - 自动化服务器更新脚本
 
 #### 更新文档
