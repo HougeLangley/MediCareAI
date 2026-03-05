@@ -11,6 +11,87 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.1.5] - 2026-03-05
+
+### Bug 修复 Bug Fixes | 🐛
+
+#### 1. Mixed Content 错误修复 (HTTPS 重定向修复)
+
+**问题描述**
+- 患者端页面通过 HTTPS 加载时，API 请求返回的 307 重定向使用了 http:// 而非 https://
+- 浏览器阻止 Mixed Content 请求，导致"加载统计数据失败"错误
+- 错误信息: `Mixed Content: The page at 'https://openmedicareai.life/patient' was loaded over HTTPS, but requested an insecure XMLHttpRequest endpoint 'http://openmedicareai.life/api/v1/patients/'`
+
+**根本原因**
+- FastAPI 自动重定向（尾部斜杠）时生成的绝对 URL 使用了 http:// scheme
+- 虽然 Nginx 传递了 `X-Forwarded-Proto: https` 头，但 FastAPI 未正确处理
+- 后端生成重定向 URL 时使用了内部 HTTP 协议而非外部 HTTPS 协议
+
+**修复方案**
+- 在 `backend/app/main.py` 添加 `fix_https_redirects` 中间件
+- 拦截所有 301/302/307/308 重定向响应
+- 将 Location 头中的 `http://` 替换为 `https://`
+- 代码变更:
+  ```python
+  @app.middleware("http")
+  async def fix_https_redirects(request: Request, call_next):
+      response = await call_next(request)
+      if response.status_code in [301, 302, 307, 308]:
+          location = response.headers.get("location", "")
+          if location.startswith("http://"):
+              new_location = location.replace("http://", "https://", 1)
+              response.headers["location"] = new_location
+      return response
+  ```
+
+#### 2. ALLOWED_HOSTS 自动检测服务器 IP
+
+**问题描述**
+- Android App 使用 IP 地址直接访问后端 API 时返回 400 Bad Request
+- `ALLOWED_HOSTS` 环境变量只配置了域名，未包含服务器 IP 地址
+
+**修复方案**
+- 在 `backend/app/main.py` 添加 `get_server_ips()` 函数
+- 自动检测服务器所有 IP 地址并添加到 ALLOWED_HOSTS
+- 支持动态获取主机名、本地 IP、网络接口 IP
+
+#### 3. 前端 API 配置修复
+
+**问题描述**
+- 前端 `API_BASE` 配置可能被覆盖导致使用 http://
+
+**修复方案**
+- 修改 `frontend/src/lib/config.ts` 添加 `getApiBase()` 函数
+- 优先使用环境变量 `VITE_API_BASE_URL`
+- 默认使用空字符串（相对路径），通过 Nginx 代理访问 API
+
+### 新增功能 Features | ✨
+
+#### Android 患者端 App
+- 使用 Jetpack Compose + Kotlin 开发的 Android 应用
+- 功能模块:
+  - 欢迎页面（Logo + 项目简介 + 登录/注册）
+  - 患者登录/注册（支持邮箱验证）
+  - 个人中心（查看/编辑个人信息）
+  - 症状提交（描述症状并获取 AI 诊断）
+  - 诊疗记录（查看历史诊断记录）
+- 技术栈: Jetpack Compose, MVVM, Ktor, Hilt DI
+- 配色方案: #667eea → #764ba2 渐变（与 Web 端一致）
+
+### 文档更新 Documentation
+
+#### 新增文档
+- `docs/SSL_AUTO_RENEWAL.mdx` - Let's Encrypt SSL 证书自动续期完整指南
+- 新增 SSL 续期脚本 `/home/houge/renew-ssl.sh`
+- 配置 Crontab 定时任务（每月1号和15号检查续期）
+
+### 变更 Changed
+- `backend/app/main.py` - 添加 HTTPS 重定向修复中间件和 IP 自动检测
+- `frontend/src/lib/config.ts` - 改进 API_BASE 配置逻辑
+- `.env` - 添加服务器 IP 到 ALLOWED_HOSTS（由后端自动处理）
+
+---
+
 ## [3.1.4] - 2026-03-03
 
 ### Bug 修复 Bug Fixes | 🐛
