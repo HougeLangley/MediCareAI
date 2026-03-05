@@ -224,6 +224,21 @@ MediCareAI uses Docker for deployment, supporting any platform with Docker insta
 - Docker 20.10+ & Docker Compose 2.0+
 - 8GB+ RAM, 20GB+ free disk space
 
+> ⚠️ **重要提示 | IMPORTANT NOTICE**
+>
+> **生产环境必须使用 SSL 证书 | SSL Certificate Required for Production**
+>
+> 部署到公网时，必须正确配置 SSL 证书 (`docker/nginx/ssl/cert.pem` 和 `key.pem`)，否则 HTTPS 将无法正常工作。
+>
+> When deploying to production, you MUST configure SSL certificates properly (`docker/nginx/ssl/cert.pem` and `key.pem`), otherwise HTTPS will not work.
+>
+> - 开发环境可使用自签名证书 | Self-signed certs OK for development
+> - 生产环境建议使用 Let's Encrypt | Let's Encrypt recommended for production
+> - 证书路径：`docker/nginx/ssl/` | Certificate path: `docker/nginx/ssl/`
+>
+> - 详见下方 [SSL Certificate Setup](#step-3-ssl-certificate-setup--步骤-3-ssl-证书配置) | See [SSL Certificate Setup](#step-3-ssl-certificate-setup--步骤-3-ssl-证书配置) below
+>
+
 ```bash
 # 1. Clone repository / 克隆仓库
 git clone https://github.com/yourusername/MediCareAI.git
