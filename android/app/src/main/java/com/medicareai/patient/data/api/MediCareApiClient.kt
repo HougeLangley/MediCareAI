@@ -147,6 +147,7 @@ class MediCareApiClient {
                     header(HttpHeaders.Authorization, "Bearer $it")
                 }
                 body?.let {
+                    contentType(ContentType.Application.Json)
                     setBody(it)
                 }
                 queryParams?.forEach { (key, value) ->
