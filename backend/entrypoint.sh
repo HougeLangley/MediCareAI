@@ -18,10 +18,12 @@ echo "Initializing database tables..."
 python /app/init_db.py
 
 echo "Running database migrations..."
+# 保留独立的迁移脚本（非 migrations/versions 目录）
 python /app/migrations/add_license_document_columns.py
 python /app/migrations/add_internal_messages_table.py
-python /app/app/migrations/versions/003_add_email_verification_fields.py
-python /app/app/migrations/versions/004_add_email_configuration.py
+# 注意：003/004/005 等版本迁移已在 init_db.py 中通过 SQLAlchemy 模型自动创建
+# 新部署无需执行硬编码迁移，旧部署已有这些字段
+# 如需手动执行：docker-compose exec backend python /app/app/migrations/versions/XXX.py
 
 echo "Initializing admin account..."
 python /app/init_admin.py
