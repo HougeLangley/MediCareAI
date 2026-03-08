@@ -177,6 +177,12 @@ async def get_document_content(
 
     # Build response based on document status
     base_response = {
+        "id": str(document.id),
+        "document_id": str(document.id),
+        "filename": document.original_filename,
+        "upload_status": document.upload_status,
+    }
+    base_response = {
         "document_id": str(document.id),
         "filename": document.original_filename,
         "upload_status": document.upload_status,

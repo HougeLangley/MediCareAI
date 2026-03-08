@@ -129,6 +129,9 @@ class MediCareApiClient {
     }
     
     fun setAuthToken(token: String?) {
+        Log.d(TAG, "Setting auth token: ${if (token != null) "token present" else "null"}")
+        authToken = token
+    }
         authToken = token
     }
     
@@ -139,6 +142,17 @@ class MediCareApiClient {
         queryParams: Map<String, String>? = null
     ): Result<T> {
         return try {
+            Log.d(TAG, "Making $method request to: $BASE_URL$endpoint")
+            Log.d(TAG, "Auth token is ${if (authToken != null) "SET" else "NULL"}")
+
+            val response = client.request(BASE_URL + endpoint) {
+                this.method = method
+                authToken?.let {
+                    Log.d(TAG, "Adding Authorization header with token")
+                    header(HttpHeaders.Authorization, "Bearer $it")
+                } ?: run {
+                    Log.w(TAG, "No auth token available!")
+                }
             Log.d(TAG, "Making $method request to: $BASE_URL$endpoint")
             
             val response = client.request(BASE_URL + endpoint) {
