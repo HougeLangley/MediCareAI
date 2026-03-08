@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)，
 并且本项目遵循 [语义化版本](https://semver.org/spec/v2.0.0.html)。
 
+## [3.4.1] - 2026-03-08
+
+### AI 诊断与文档处理修复 | AI Diagnosis & Document Processing Fixes | 🐛🔧
+
+#### 关键修复 Critical Fixes | 🐛
+
+**1. AI 诊断流式响应解析修复**
+- **问题**: Android App 在症状提交后一直显示加载中，无法显示 AI 诊断结果
+- **原因**: 后端返回的 SSE 完成消息包含额外字段（`saved_to_records`, `status`, `created_at`），Android 端解析时因缺少这些字段而失败
+- **修复**: 在 `MediCareApiClient.kt` 的 SSE 解析中添加 `ignoreUnknownKeys = true`
+
+**2. 文档内容接口字段修复**
+- **问题**: Android 轮询文档处理状态时返回 500 错误
+- **原因**: 后端 `/documents/{id}/content` 返回 `document_id`，但 Android 期望 `id`
+- **修复**: 在响应中添加 `id` 字段，保留 `document_id` 向后兼容
+
+**3. AI 诊断地址字段修复**
+- **问题**: 症状提交时后端报错 `'Patient' object has no attribute 'address'`
+- **原因**: Patient 模型已移除 `address` 字段，但 AI 诊断端点仍尝试访问 `patient.address`
+- **修复**: 将 `patient.address` 改为 `current_user.address`
+
+**4. 患者档案字段显示修复**
+- **问题**: 注册时填写的出生日期、性别、手机号等字段在个人中心显示为空
+- **原因**: `/auth/me` 端点只返回 User 表数据，而这些字段存储在 Patient 表中
+- **修复**: 修改 `/auth/me` 端点同时查询 Patient 表，合并返回完整数据
+
+---
+
 ## [3.4.0] - 2026-03-08
 
 ### 患者注册与档案管理综合修复 | Patient Registration & Profile Management Fixes | 🐛🔧
