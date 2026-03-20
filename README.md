@@ -784,7 +784,19 @@ MediCareAI/
 ├── 📁 android/                   # Android App - Android 应用 (Jetpack Compose + Kotlin)
 │   ├── 📁 app/
 │   │   ├── 📁 src/main/java/com/medicareai/patient/
-│   │   │   ├── 📁 ui/
+│   │   │   ├── 📁 data/          # Data Layer - 数据层
+│   │   │   │   ├── 📁 api/       # API Client - API客户端
+│   │   │   │   │   └── MediCareApiClient.kt   # HTTP Client with Token Refresh - 带自动刷新的HTTP客户端
+│   │   │   │   ├── 📁 local/     # Local Storage - 本地存储
+│   │   │   │   │   └── TokenManager.kt        # Token Persistence - Token持久化管理
+│   │   │   │   ├── 📁 model/     # Data Models - 数据模型
+│   │   │   │   │   ├── Models.kt              # Entity Models - 实体模型
+│   │   │   │   │   └── AddressData.kt         # Address Model - 地址模型
+│   │   │   │   └── 📁 repository/# Repositories - 仓库层
+│   │   │   │       └── Repository.kt          # Data Repository - 数据仓库
+│   │   │   ├── 📁 di/            # Dependency Injection - 依赖注入
+│   │   │   │   └── AppModule.kt               # Hilt Modules - Hilt模块配置
+│   │   │   ├── 📁 ui/            # UI Layer - UI层
 │   │   │   │   ├── 📁 screens/   # Screen Components - 屏幕组件
 │   │   │   │   │   ├── WelcomeScreen.kt       # Welcome - 欢迎页
 │   │   │   │   │   ├── LoginScreen.kt         # Login - 登录页
@@ -796,10 +808,10 @@ MediCareAI/
 │   │   │   │   │   └── LegalContent.kt        # Legal Content - 法律文档内容
 │   │   │   │   ├── 📁 theme/     # Theme - 主题
 │   │   │   │   └── 📁 components/# Components - 组件
+│   │   │   │       ├── AddressPickerField.kt  # Address Picker - 地址选择器
+│   │   │   │       └── DatePickerField.kt     # Date Picker - 日期选择器
 │   │   │   ├── 📁 viewmodel/     # ViewModels - 视图模型
-│   │   │   │   └── AuthViewModel.kt
-│   │   │   ├── 📁 network/       # Network - 网络
-│   │   │   │   └── ApiClient.kt  # API Client - API客户端
+│   │   │   │   └── ViewModels.kt              # All ViewModels - 所有视图模型
 │   │   │   └── MainActivity.kt   # Main Activity - 主活动
 │   │   ├── 📁 res/               # Resources - 资源文件
 │   │   └── build.gradle.kts      # App Build Config - 应用构建配置

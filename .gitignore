@@ -165,3 +165,6 @@ local/
 local.*
 dev.*
 override.*
+
+# Android data/local exception (TokenManager storage)
+!android/**/data/local/

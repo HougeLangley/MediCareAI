@@ -91,6 +91,7 @@ class AuthViewModel @Inject constructor(
     
     fun checkAuthStatus() {
         viewModelScope.launch {
+            authRepository.loadSavedToken()
             authRepository.getCurrentUser()
                 .onSuccess { user ->
                     _currentUser.value = user
@@ -285,7 +286,7 @@ class SymptomSubmitViewModel @Inject constructor(
             )
             _submitState.value = UiState.Loading
             
-            caseRepository.createCase(title, symptoms, severity, description)
+            caseRepository.createCase(CreateCaseRequest(title, symptoms, severity, description))
                 .onSuccess { case ->
                     _submitState.value = UiState.Success(case)
                     
@@ -445,7 +446,7 @@ class SymptomSubmitViewModel @Inject constructor(
                 isLoading = true,
                 status = "AI诊断中..."
             )
-            
+
             val request = DiagnosisRequest(
                 case_id = caseId,
                 symptoms = symptoms,
@@ -456,7 +457,7 @@ class SymptomSubmitViewModel @Inject constructor(
                 doctor_ids = doctorIds,
                 share_with_doctors = shareWithDoctors
             )
-            
+
             aiRepository.diagnoseStream(request)
                 .collect { response ->
                     android.util.Log.d("DiagnosisVM", "Received response - done: ${response.done}, chunk: ${response.chunk != null}, model: ${response.model_id ?: response.model_used}, tokens: ${response.tokens_used}")
@@ -471,15 +472,13 @@ class SymptomSubmitViewModel @Inject constructor(
                         }
                         response.done == true -> {
                             android.util.Log.d("DiagnosisVM", "Completion received - model: ${response.model_id ?: response.model_used}, tokens: ${response.tokens_used}, kb: ${response.knowledge_base_sources?.size ?: 0}")
-                            // Only update model/tokens if they're not already set from chunk parsing
                             val newModelId = response.model_id ?: response.model_used
                             val newTokens = response.tokens_used
                             val newKbSources = response.knowledge_sources ?: response.knowledge_base_sources
-                            
+
                             _streamingState.value = _streamingState.value.copy(
                                 isLoading = false,
                                 status = "诊断完成",
-                                // Only overwrite if new values are not null, otherwise keep existing
                                 modelId = if (newModelId != null) newModelId else _streamingState.value.modelId,
                                 tokensUsed = if (newTokens != null) newTokens else _streamingState.value.tokensUsed,
                                 knowledgeSources = if (!newKbSources.isNullOrEmpty()) newKbSources else _streamingState.value.knowledgeSources,
@@ -487,16 +486,11 @@ class SymptomSubmitViewModel @Inject constructor(
                             )
                         }
                         else -> {
-
-                            // Append chunk to existing content (filter out JSON metadata)
                             val chunk = response.chunk ?: ""
                             android.util.Log.d("DiagnosisVM", "Chunk received: ${chunk.take(50)}...")
-                            
-                            // Check if this chunk contains completion JSON
+
                             if (chunk.trimStart().startsWith("{\"done\"") && chunk.contains("case_id")) {
-                                // Parse completion JSON from chunk
                                 try {
-                                    // Use Json parser with ignoreUnknownKeys to handle extra fields from backend
                                     val jsonParser = kotlinx.serialization.json.Json {
                                         ignoreUnknownKeys = true
                                     }
@@ -505,13 +499,12 @@ class SymptomSubmitViewModel @Inject constructor(
                                         chunk
                                     )
                                     android.util.Log.d("DiagnosisVM", "Parsed completion from chunk - model: ${completionData.model_id ?: completionData.model_used}, tokens: ${completionData.tokens_used}")
-                                    
-                                    // Update state with completion data
+
                                     _streamingState.value = _streamingState.value.copy(
                                         modelId = completionData.model_id ?: completionData.model_used,
                                         tokensUsed = completionData.tokens_used,
-                                        knowledgeSources = completionData.knowledge_sources 
-                                            ?: completionData.knowledge_base_sources 
+                                        knowledgeSources = completionData.knowledge_sources
+                                            ?: completionData.knowledge_base_sources
                                             ?: emptyList(),
                                         isComplete = true
                                     )
@@ -519,7 +512,6 @@ class SymptomSubmitViewModel @Inject constructor(
                                     android.util.Log.e("DiagnosisVM", "Failed to parse completion JSON from chunk", e)
                                 }
                             } else {
-                                // Regular content chunk - append to content
                                 val currentContent = _streamingState.value.content
                                 _streamingState.value = _streamingState.value.copy(
                                     content = currentContent + chunk,
@@ -530,5 +522,91 @@ class SymptomSubmitViewModel @Inject constructor(
                     }
                 }
         }
+    }
+}
+
+@HiltViewModel
+class ChronicDiseaseViewModel @Inject constructor(
+    private val chronicDiseaseRepository: ChronicDiseaseRepository
+) : ViewModel() {
+
+    private val _availableDiseases = MutableStateFlow<UiState<List<ChronicDisease>>>(UiState.Idle)
+    val availableDiseases: StateFlow<UiState<List<ChronicDisease>>> = _availableDiseases.asStateFlow()
+
+    private val _myDiseases = MutableStateFlow<UiState<List<PatientChronicCondition>>>(UiState.Idle)
+    val myDiseases: StateFlow<UiState<List<PatientChronicCondition>>> = _myDiseases.asStateFlow()
+
+    private val _addDiseaseState = MutableStateFlow<UiState<PatientChronicCondition>>(UiState.Idle)
+    val addDiseaseState: StateFlow<UiState<PatientChronicCondition>> = _addDiseaseState.asStateFlow()
+
+    private val _deleteDiseaseState = MutableStateFlow<UiState<Unit>>(UiState.Idle)
+    val deleteDiseaseState: StateFlow<UiState<Unit>> = _deleteDiseaseState.asStateFlow()
+
+    fun loadAvailableDiseases() {
+        viewModelScope.launch {
+            _availableDiseases.value = UiState.Loading
+            chronicDiseaseRepository.getChronicDiseases()
+                .onSuccess { response ->
+                    _availableDiseases.value = UiState.Success(response.items)
+                }
+                .onFailure { error ->
+                    _availableDiseases.value = UiState.Error(error.message ?: "加载疾病列表失败")
+                }
+        }
+    }
+
+    fun loadMyDiseases() {
+        viewModelScope.launch {
+            _myDiseases.value = UiState.Loading
+            chronicDiseaseRepository.getMyChronicDiseases()
+                .onSuccess { response ->
+                    _myDiseases.value = UiState.Success(response.items)
+                }
+                .onFailure { error ->
+                    _myDiseases.value = UiState.Error(error.message ?: "加载我的疾病失败")
+                }
+        }
+    }
+
+    fun addChronicDisease(diseaseId: String, diagnosisDate: String?, severity: String?, notes: String?) {
+        viewModelScope.launch {
+            _addDiseaseState.value = UiState.Loading
+            val request = AddChronicDiseaseRequest(
+                disease_id = diseaseId,
+                diagnosis_date = diagnosisDate,
+                severity = severity,
+                notes = notes
+            )
+            chronicDiseaseRepository.addChronicDisease(request)
+                .onSuccess { condition ->
+                    _addDiseaseState.value = UiState.Success(condition)
+                    loadMyDiseases()
+                }
+                .onFailure { error ->
+                    _addDiseaseState.value = UiState.Error(error.message ?: "添加疾病失败")
+                }
+        }
+    }
+
+    fun deleteChronicDisease(conditionId: String) {
+        viewModelScope.launch {
+            _deleteDiseaseState.value = UiState.Loading
+            chronicDiseaseRepository.deleteChronicDisease(conditionId)
+                .onSuccess {
+                    _deleteDiseaseState.value = UiState.Success(Unit)
+                    loadMyDiseases()
+                }
+                .onFailure { error ->
+                    _deleteDiseaseState.value = UiState.Error(error.message ?: "删除疾病失败")
+                }
+        }
+    }
+
+    fun clearAddState() {
+        _addDiseaseState.value = UiState.Idle
+    }
+
+    fun clearDeleteState() {
+        _deleteDiseaseState.value = UiState.Idle
     }
 }

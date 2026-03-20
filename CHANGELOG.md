@@ -9,6 +9,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)，
 并且本项目遵循 [语义化版本](https://semver.org/spec/v2.0.0.html)。
 
+## [3.5.0] - 2026-03-20
+
+### Android 特慢病管理与 Token 自动刷新 | Android Chronic Disease & Token Auto-Refresh | ✨🔐
+
+#### 新增功能 New Features | ✨
+
+**1. Android 特慢病管理功能**
+- **功能描述**: 在个人中心添加"特殊病与慢性病管理"模块
+- **功能特性**:
+  - 显示已添加的慢性病/特殊病列表，按类型颜色区分（黄色-特殊病/蓝色-慢性病/红色-两者兼具）
+  - 添加疾病：从 ICD-10 疾病库选择，支持严重程度、确诊日期、备注
+  - 删除疾病：支持删除已添加的疾病记录
+  - 日期选择器：使用 Material3 DatePicker 确保日期格式正确
+  - 重要提示：黄色警告框提醒用户如实填写病史
+- **数据模型**: `ChronicDisease`, `PatientChronicCondition`, `AddChronicDiseaseRequest`
+- **UI 组件**: 新增 `ChronicDiseaseSection`, `ChronicDiseaseChip`, `AddChronicDiseaseDialog`
+
+**2. Token 自动刷新机制**
+- **问题背景**: Access Token 30 分钟过期后，用户需要重新登录
+- **解决方案**: 实现 401 错误拦截 + 自动刷新 Token + 请求重试的完整流程
+- **技术实现**:
+  - 新增 `TokenManager` 类：使用 DataStore 持久化存储 access_token、refresh_token 和过期时间
+  - 重写 `MediCareApiClient`：注入 TokenManager，实现 `makeRequestInternal` 统一处理 401 错误
+  - 互斥锁机制：使用 `Mutex` 防止并发刷新请求
+  - 自动重试：Token 刷新成功后自动重试原请求
+  - 刷新时机：收到 401 错误时自动刷新，支持提前 5 分钟预刷新
+- **用户体验**: Token 过期完全无感知，无需重新登录
+
+**3. 文件上传大小提示**
+- **位置**: 症状提交页面的检查资料上传区域
+- **提示内容**: "单个文件大小不得超过 10MB"
+- **样式**: 灰色小字显示在选择文件按钮下方
+
+#### 修改文件清单 Modified Files
+
+| 文件路径 | 修改类型 | 说明 |
+|---------|---------|------|
+| `android/app/src/main/java/.../data/local/TokenManager.kt` | 新增 | Token 持久化管理类 |
+| `android/app/src/main/java/.../data/api/MediCareApiClient.kt` | 重写 | 实现 401 拦截和自动刷新 |
+| `android/app/src/main/java/.../data/repository/Repository.kt` | 修改 | 集成 Token 过期时间存储 |
+| `android/app/src/main/java/.../di/AppModule.kt` | 修改 | 配置 TokenManager 依赖注入 |
+| `android/app/src/main/java/.../ui/screens/ProfileScreen.kt` | 重写 | 添加特慢病管理功能 |
+| `android/app/src/main/java/.../ui/screens/SymptomSubmitScreen.kt` | 修改 | 添加 10MB 文件提示 |
+| `android/app/src/main/java/.../data/model/Models.kt` | 新增 | 特慢病相关数据模型 |
+| `android/app/src/main/java/.../viewmodel/ViewModels.kt` | 新增 | ChronicDiseaseViewModel |
+| `.gitignore` | 修改 | 添加 Android data/local 例外规则 |
+
+---
+
 ## [3.4.1] - 2026-03-08
 
 ### AI 诊断与文档处理修复 | AI Diagnosis & Document Processing Fixes | 🐛🔧

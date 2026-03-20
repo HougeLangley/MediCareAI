@@ -389,7 +389,15 @@ fun SymptomSubmitScreen(
                         Icon(Icons.Default.AttachFile, null, modifier = Modifier.padding(end = 8.dp))
                         Text("选择文件 (PDF/图片/文档)")
                     }
-                    
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "单个文件大小不得超过 10MB",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+
                     if (uploadState is UiState.Error) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(

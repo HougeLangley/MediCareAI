@@ -234,3 +234,58 @@ data class StreamingDiagnosisResponse(
     val message: String? = null,
     val error: String? = null
 )
+
+@Serializable
+data class ChronicDisease(
+    val id: String,
+    val icd10_code: String,
+    val icd10_name: String,
+    val disease_type: String,
+    val common_names: List<String>? = null,
+    val category: String? = null,
+    val description: String? = null,
+    val medical_notes: String? = null,
+    val is_active: Boolean = true
+)
+
+@Serializable
+data class ChronicDiseaseListResponse(
+    val items: List<ChronicDisease> = emptyList(),
+    val total: Int = 0,
+    val page: Int = 1,
+    val page_size: Int = 50
+)
+
+@Serializable
+data class PatientChronicCondition(
+    val id: String,
+    val patient_id: String,
+    val disease_id: String,
+    val disease: ChronicDisease? = null,
+    val diagnosis_date: String? = null,
+    val severity: String? = null,
+    val notes: String? = null,
+    val is_active: Boolean = true
+)
+
+@Serializable
+data class PatientChronicConditionListResponse(
+    val items: List<PatientChronicCondition> = emptyList(),
+    val total: Int = 0
+)
+
+@Serializable
+data class AddChronicDiseaseRequest(
+    val disease_id: String,
+    val diagnosis_date: String? = null,
+    val severity: String? = null,
+    val notes: String? = null
+)
+
+@Serializable
+data class UpdateChronicDiseaseRequest(
+    val diagnosis_date: String? = null,
+    val severity: String? = null,
+    val notes: String? = null,
+    val is_active: Boolean? = null
+)
