@@ -137,7 +137,11 @@ private fun AddressPickerDialog(
                         text = selectedDistrict?.name ?: "请选择区县",
                         modifier = Modifier.weight(1f)
                     )
-                    Icon(Icons.Default.KeyboardArrowDown, null)
+                    Icon(
+                        Icons.Default.KeyboardArrowDown, 
+                        null,
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
                 }
 
                 // Preview

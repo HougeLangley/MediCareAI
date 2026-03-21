@@ -437,12 +437,17 @@ fun DashboardScreen(
         AlertDialog(
             onDismissRequest = { showQrCodeDialog = false },
             title = { 
-                Text(
-                    "支持 MediCareAI", 
-                    color = PrimaryBlue,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                ) 
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "支持 MediCareAI", 
+                        color = PrimaryBlue,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    ) 
+                }
             },
             text = {
                 Column(
@@ -470,8 +475,13 @@ fun DashboardScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showQrCodeDialog = false }) {
-                    Text("关闭", color = PrimaryBlue)
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    TextButton(onClick = { showQrCodeDialog = false }) {
+                        Text("关闭", color = PrimaryBlue)
+                    }
                 }
             }
         )

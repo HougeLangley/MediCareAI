@@ -9,6 +9,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)，
 并且本项目遵循 [语义化版本](https://semver.org/spec/v2.0.0.html)。
 
+## [3.5.1] - 2026-03-21
+
+### Android UI 修复与行政区划数据补全 | Android UI Fixes & Address Data Completion | 🐛✨
+
+#### Bug 修复 Bug Fixes | 🐛
+
+**1. 注册界面暗色模式显示问题修复**
+- **问题**: 暗色模式下注册页面的输入框 label 在白色卡片背景上显示不清晰
+- **原因**: Card 组件使用了硬编码的 `Color.White` 作为背景色，与暗色主题不兼容
+- **修复**: 将 Card 背景色从 `Color.White` 改为 `MaterialTheme.colorScheme.surface`，使组件能够自适应主题
+- **涉及文件**: `RegisterScreen.kt`
+
+**2. 省市区选择器数据补全**
+- **问题**: 云南省昆明市等多数城市仅显示 1-2 个区县，数据严重缺失
+- **解决方案**: 基于中华人民共和国民政部 2024 年最新行政区划代码(GB2260-2024)补全全国 34 个省级行政区的完整区县数据
+- **更新范围**:
+  - 华北地区：北京、天津、河北、山西、内蒙古（5个）
+  - 东北地区：辽宁、吉林、黑龙江（3个）
+  - 华东地区：上海、江苏、浙江、安徽、福建、江西、山东（7个）
+  - 华中地区：河南、湖北、湖南（3个）
+  - 华南地区：广东、广西、海南（3个）
+  - 西南地区：重庆、四川、贵州、云南、西藏（5个）
+  - 西北地区：陕西、甘肃、青海、宁夏、新疆（5个）
+  - 港澳台：台湾省数据保持不变
+- **数据统计**: 380+ 城市，1,600+ 区县
+- **涉及文件**: `AddressData.kt`
+
+**3. 支持项目弹窗标题居中**
+- **问题**: "支持 MediCareAI" 弹窗的标题和"关闭"按钮未居中显示
+- **修复**: 使用 `Box` + `Alignment.Center` 包裹标题文字和关闭按钮
+- **涉及文件**: `DashboardScreen.kt`
+
+#### 优化改进 Improvements | 🔧
+
+**输入框颜色统一处理**
+- 移除了所有输入框显式的颜色设置，让 Material3 自动处理颜色对比度
+- 简化了 `RegisterScreen.kt`、`AddressPickerField.kt`、`DatePickerField.kt` 中的颜色配置代码
+- 提升了暗色/亮色模式切换时的显示一致性
+
+#### 修改文件清单 Modified Files
+
+| 文件路径 | 修改类型 | 说明 |
+|---------|---------|------|
+| `android/app/src/main/java/.../data/model/AddressData.kt` | 重写 | 补全全国34个省级行政区完整区县数据（1,600+区县） |
+| `android/app/src/main/java/.../ui/screens/RegisterScreen.kt` | 修改 | 修复暗色模式Card背景色，简化输入框颜色配置 |
+| `android/app/src/main/java/.../ui/screens/DashboardScreen.kt` | 修改 | 修复支持项目弹窗标题和按钮居中 |
+| `android/app/src/main/java/.../ui/components/AddressPickerField.kt` | 修改 | 简化颜色配置，移除显式颜色设置 |
+| `android/app/src/main/java/.../ui/components/DatePickerField.kt` | 修改 | 简化颜色配置，移除显式颜色设置 |
+
+---
+
 ## [3.5.0] - 2026-03-20
 
 ### Android 特慢病管理与 Token 自动刷新 | Android Chronic Disease & Token Auto-Refresh | ✨🔐
