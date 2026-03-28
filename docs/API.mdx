@@ -259,6 +259,46 @@ Content-Type: application/json
 | GET | `/admin/ai-diagnosis-logs` | AI 诊断日志 / AI diagnosis logs |
 | POST | `/admin/doctors/sync-verification` | 同步医生认证状态 / Sync doctor verification |
 
+#### 4.8.1 维护通知 | Maintenance Notification
+
+**发送维护通知** | **Send Maintenance Notification**
+
+```http
+POST /api/v1/admin/maintenance-notification
+Authorization: Bearer <admin_token>
+Content-Type: application/json
+
+{
+  "maintenance_time": "2026年4月1日 02:00 - 06:00",
+  "maintenance_content": "系统升级和数据库优化"
+}
+```
+
+**请求参数** | **Request Parameters:**
+
+| 参数 | 类型 | 必填 | 描述 |
+|------|------|------|------|
+| maintenance_time | string | 是 | 维护时间段，如"2026年4月1日 02:00 - 06:00" |
+| maintenance_content | string | 否 | 维护内容说明 |
+
+**响应示例** | **Response Example:**
+
+```json
+{
+  "message": "Maintenance notification sent successfully",
+  "total_users": 100,
+  "success_count": 98,
+  "failed_count": 2,
+  "failed_emails": ["bad@example.com"]
+}
+```
+
+**功能说明** | **Description:**
+- 仅管理员可访问
+- 向所有 role 为 patient 或 doctor 的用户发送维护通知邮件
+- 使用系统配置的 SMTP 邮件服务
+- 发送结果记录到管理员操作日志
+
 ### 4.9 向量嵌入模块 | Vector Embedding Module
 
 | 方法 / Method | 端点 / Endpoint | 描述 / Description |

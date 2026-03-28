@@ -129,6 +129,7 @@
 - **AI Diagnosis Analytics**: Statistics, anomaly detection, performance metrics
 - **Doctor Verification**: Review doctor registrations, approve/reject with audit logging
 - **Knowledge Base Management**: Vectorize documents, manage medical guidelines, RAG configuration
+- **Internal Messaging**: Receive messages from doctors, reply functionality, system maintenance notifications
 - **Audit Logging**: Complete operation logs for compliance and security
 - **Data Persistence**: Docker volumes with restart: always policy
 
@@ -137,6 +138,7 @@
 - **AI 诊断分析**: 统计、异常检测、性能指标
 - **医生认证**: 审核医生注册、批准/拒绝，带审计日志
 - **知识库管理**: 文档向量化、管理医疗指南、RAG 配置
+- **站内信管理**: 接收医生消息、回复功能、系统维护通知群发
 - **审计日志**: 完整的操作日志用于合规和安全
 - **数据持久化**: Docker 卷配置 restart: always 策略
 

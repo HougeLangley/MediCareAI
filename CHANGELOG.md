@@ -11,6 +11,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 系统维护通知功能 | System Maintenance Notification | ✨
+
+#### 新增功能 New Features | ✨
+
+**管理员站内信维护通知功能**
+- **功能描述**: 管理员可以通过站内信管理页面群发系统维护通知邮件给所有注册患者和医生
+- **功能特性**:
+  - 一键群发：向所有患者和医生发送系统维护通知邮件
+  - 自定义内容：支持设置维护时间段和维护内容说明
+  - 发送统计：显示发送成功数量、失败数量和总用户数
+  - 邮件模板：使用紫色渐变主题的专业邮件模板
+- **涉及端点**: `POST /api/v1/admin/maintenance-notification`
+- **涉及文件**: 
+  - `backend/app/api/api_v1/endpoints/messages.py`
+  - `backend/app/services/email_templates.py`
+  - `frontend/src/pages/admin/Messages.tsx`
+
+---
+
 ### Android 深色模式修复 | Android Dark Mode Fix | 🐛
 
 #### Bug 修复 Bug Fixes | 🐛
