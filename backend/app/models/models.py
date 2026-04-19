@@ -127,14 +127,6 @@ class User(Base):
         DateTime(timezone=True), nullable=True, comment="Password reset sent time / 重置邮件发送时间"
     )
 
-    # =============================================================================
-    # Patient-Specific Fields (nullable for doctors/admins) | 患者特有字段
-    # =============================================================================
-    date_of_birth = Column(
-        Date, nullable=True, comment="[Patient] Date of birth / [患者] 出生日期"
-    )
-
-    # =============================================================================
 
     # =============================================================================
     # Patient-Specific Fields (nullable for doctors/admins) | 患者特有字段
