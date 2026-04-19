@@ -127,7 +127,6 @@ async def _send_doctor_notification(
 
 
 
-
 @router.get("/dashboard/summary", response_model=Dict[str, Any])
 async def get_dashboard_summary(
     db: AsyncSession = Depends(get_db), admin: User = Depends(require_admin)
