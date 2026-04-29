@@ -189,13 +189,18 @@ class VectorEmbeddingService:
         
         Compatible with OpenAI API and Qwen API format.
         """
-        # Check if it's Qwen API
         is_qwen = provider == 'qwen' or 'dashscope' in api_url.lower() or 'aliyun' in api_url.lower()
+        is_jina = provider == 'jina' or 'jina.ai' in api_url.lower()
         
-        # Determine URL - for some providers, the full URL is in api_url
         api_endpoint = api_url
-        if not api_endpoint.endswith('/embeddings') and not 'text-embedding/text-embedding' in api_endpoint:
-            api_endpoint = f"{api_endpoint.rstrip('/')}embeddings"
+        if is_jina:
+            if not api_endpoint.endswith('/v1/embeddings'):
+                if '/v1' not in api_endpoint:
+                    api_endpoint = f"{api_endpoint.rstrip('/')}/v1/embeddings"
+                elif not api_endpoint.endswith('/embeddings'):
+                    api_endpoint = f"{api_endpoint.rstrip('/')}/embeddings"
+        elif not api_endpoint.endswith('/embeddings') and not 'text-embedding/text-embedding' in api_endpoint:
+            api_endpoint = f"{api_endpoint.rstrip('/')}/embeddings"
         
         async with httpx.AsyncClient(timeout=30.0) as client:
             if is_qwen:
@@ -347,10 +352,9 @@ class VectorEmbeddingService:
         if not config:
             raise ValueError("No active embedding configuration found")
         
-        # Check if it's Qwen API
         is_qwen = config.provider == 'qwen' or 'dashscope' in config.api_url.lower()
+        is_jina = config.provider == 'jina' or 'jina.ai' in config.api_url.lower()
         
-        # Process in batches of 10 (Qwen limit for batch embedding)
         batch_size = 10 if is_qwen else 100
         all_embeddings = []
         
@@ -360,17 +364,21 @@ class VectorEmbeddingService:
         for i in range(0, len(texts), batch_size):
             batch = texts[i:i + batch_size]
             
-            # Retry logic for connection errors
             max_retries = 3
-            retry_delay = 2  # seconds
+            retry_delay = 2
             
             for attempt in range(max_retries):
                 try:
                     async with httpx.AsyncClient(timeout=60.0) as client:
-                        # Determine URL - for some providers, the full URL is in api_url
                         api_endpoint = config.api_url
-                        if not api_endpoint.endswith('/embeddings') and not 'text-embedding/text-embedding' in api_endpoint:
-                            api_endpoint = f"{api_endpoint.rstrip('/')}embeddings"
+                        if is_jina:
+                            if not api_endpoint.endswith('/v1/embeddings'):
+                                if '/v1' not in api_endpoint:
+                                    api_endpoint = f"{api_endpoint.rstrip('/')}/v1/embeddings"
+                                elif not api_endpoint.endswith('/embeddings'):
+                                    api_endpoint = f"{api_endpoint.rstrip('/')}/embeddings"
+                        elif not api_endpoint.endswith('/embeddings') and not 'text-embedding/text-embedding' in api_endpoint:
+                            api_endpoint = f"{api_endpoint.rstrip('/')}/embeddings"
                         
                         if is_qwen:
                             # Qwen API format
@@ -432,64 +440,6 @@ class VectorEmbeddingService:
                 except Exception as e:
                     # Don't retry on other errors
                     raise
-        
-        return all_embeddings
-        all_embeddings = []
-        
-        for i in range(0, len(texts), batch_size):
-            batch = texts[i:i + batch_size]
-            
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                # Determine URL - for some providers, the full URL is in api_url
-                api_endpoint = config.api_url
-                if not api_endpoint.endswith('/embeddings') and not 'text-embedding/text-embedding' in api_endpoint:
-                    api_endpoint = f"{api_endpoint.rstrip('/')}embeddings"
-                
-                if is_qwen:
-                    # Qwen API format
-                    response = await client.post(
-                        api_endpoint,
-                        headers={
-                            "Content-Type": "application/json",
-                            "Authorization": f"Bearer {config.api_key}"
-                        },
-                        json={
-                            "model": config.model_id or "text-embedding-v3",
-                            "input": {
-                                "texts": batch
-                            }
-                        }
-                    )
-                else:
-                    # OpenAI API format
-                    response = await client.post(
-                        api_endpoint,
-                        headers={
-                            "Content-Type": "application/json",
-                            "Authorization": f"Bearer {config.api_key}"
-                        },
-                        json={
-                            "model": config.model_id,
-                            "input": batch,
-                            "encoding_format": "float"
-                        }
-                    )
-                
-                if response.status_code == 200:
-                    result = response.json()
-                    
-                    # Handle Qwen response format
-                    if is_qwen and 'output' in result and 'embeddings' in result['output']:
-                        batch_embeddings = [item['embedding'] for item in result['output']['embeddings']]
-                        all_embeddings.extend(batch_embeddings)
-                    # Handle OpenAI response format
-                    elif 'data' in result:
-                        batch_embeddings = [item['embedding'] for item in result['data']]
-                        all_embeddings.extend(batch_embeddings)
-                    else:
-                        raise ValueError(f"Invalid response format from embedding API: {result}")
-                else:
-                    raise Exception(f"Embedding API error: {response.status_code} - {response.text}")
         
         return all_embeddings
     

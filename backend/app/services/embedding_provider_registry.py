@@ -82,6 +82,13 @@ class EmbeddingProvider:
                 if '/embeddings' not in url:
                     url = f"{url.rstrip('/')}/v1/embeddings"
         
+        elif self.key == 'jina':
+            if not url.endswith('/v1/embeddings'):
+                if '/v1' not in url:
+                    url = f"{url.rstrip('/')}/v1/embeddings"
+                elif not url.endswith('/embeddings'):
+                    url = f"{url.rstrip('/')}/embeddings"
+        
         return url
 
 
@@ -157,6 +164,18 @@ class EmbeddingProviderRegistry:
             request_format='openai',
             description='本地部署的 vLLM 嵌入模型服务'
         ),
+        'jina': EmbeddingProvider(
+            key='jina',
+            name='Jina AI',
+            name_zh='Jina AI',
+            default_url='https://api.jina.ai/v1/embeddings',
+            default_model='jina-embeddings-v3',
+            vector_dimension=1024,
+            batch_size=100,
+            headers_format='bearer',
+            request_format='openai',
+            description='Jina AI 嵌入模型服务 (免费额度可用)'
+        ),
         'custom': EmbeddingProvider(
             key='custom',
             name='Custom Provider',
@@ -208,6 +227,8 @@ class EmbeddingProviderRegistry:
             return 'dashscope'
         elif 'openai.com' in url_lower:
             return 'openai'
+        elif 'jina.ai' in url_lower:
+            return 'jina'
         elif ':11434' in url_lower or '/ollama' in url_lower:
             return 'ollama'
         elif 'xinference' in url_lower or ':9997' in url_lower:

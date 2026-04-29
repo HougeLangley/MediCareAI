@@ -1738,22 +1738,31 @@ async def _test_ai_model_connection(
                     "dashscope" in config.api_url.lower()
                     or "aliyun" in config.api_url.lower()
                 )
+                is_jina = (
+                    config.provider == "jina"
+                    or "jina.ai" in config.api_url.lower()
+                )
 
                 # Build appropriate payload based on provider
                 if test_payload:
                     payload = test_payload
                 elif is_qwen:
-                    # Qwen/DashScope format
                     payload = {"model": config.model_id, "input": {"texts": ["test"]}}
                 else:
-                    # OpenAI format
                     payload = {"model": config.model_id, "input": ["test"]}
 
-                # Use the URL as provided (don't add /embeddings)
-                # The URL should already be the complete embedding endpoint
                 test_url = config.api_url
                 if test_url.endswith("/"):
                     test_url = test_url.rstrip("/")
+                
+                if is_jina:
+                    if not test_url.endswith('/v1/embeddings'):
+                        if '/v1' not in test_url:
+                            test_url = f"{test_url}/v1/embeddings"
+                        elif not test_url.endswith('/embeddings'):
+                            test_url = f"{test_url}/embeddings"
+                elif not test_url.endswith('/embeddings') and not 'text-embedding/text-embedding' in test_url:
+                    test_url = f"{test_url}/embeddings"
 
                 async with session.post(
                     test_url,

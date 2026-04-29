@@ -60,29 +60,6 @@ class RerankingService:
                 return None
 
             return config
-            config_service = AIModelConfigService(self.db)
-            config_obj = await config_service.get_config("rerank")
-
-            if not config_obj or not getattr(config_obj, "enabled", False):
-                return None
-
-            # Convert AIModelConfiguration object to dict
-            config = {
-                "enabled": getattr(config_obj, "enabled", False),
-                "api_url": getattr(config_obj, "api_url", ""),
-                "api_key": getattr(config_obj, "api_key", ""),
-                "model_id": getattr(config_obj, "model_id", ""),
-                "provider": getattr(config_obj, "provider", "custom"),
-            }
-
-            return config
-            config_service = AIModelConfigService(self.db)
-            config = await config_service.get_config("rerank")
-
-            if not config or not config.get("enabled"):
-                return None
-
-            return config
         except Exception as e:
             logger.warning(f"Failed to load rerank config: {e}")
             return None
