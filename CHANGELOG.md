@@ -55,6 +55,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+### Jina AI Embedding & Reranking 模型配置修复 | Jina AI Model Configuration Fix | 🐛
+
+#### Bug 修复 Bug Fixes | 🐛
+
+**1. Jina AI embedding 模型无法配置**
+- **问题**: 生产环境管理员界面配置 Jina embedding 模型时提示 "HTTP 401: Unknown error"
+- **根因分析**:
+  - `embedding_provider_registry.py` 中未注册 Jina AI 作为原生 embedding provider
+  - `vector_embedding_service.py` 中 URL 拼接存在 bug：`https://api.jina.ai/v1` → `https://api.jina.ai/v1embeddings`（缺少 `/`）
+  - `admin.py` embedding 测试连接时没有自动补全 `/embeddings` 路径
+- **修复**:
+  - 在 `EmbeddingProviderRegistry` 中注册 Jina AI（默认 URL: `https://api.jina.ai/v1/embeddings`，默认模型: `jina-embeddings-v3`，维度: 1024）
+  - 修复 URL 拼接逻辑，确保正确生成 `/v1/embeddings` 路径
+  - admin 测试连接时自动补全 URL 路径
+- **涉及文件**: `backend/app/services/embedding_provider_registry.py`, `backend/app/services/vector_embedding_service.py`, `backend/app/api/api_v1/endpoints/admin.py`
+
+**2. AI 模型测试使用旧配置**
+- **问题**: 在"配置模型"对话框中输入新配置后点击"测试连通性"，后端始终使用数据库中的旧配置进行测试
+- **根因**: `test_ai_model` endpoint 忽略前端传来的配置，直接从数据库读取
+- **修复**:
+  - `AIModelTestRequest` schema 添加 `api_url`, `api_key`, `model_id`, `provider` 字段
+  - `test_ai_model` endpoint 优先使用请求体中的配置进行测试，回退到数据库配置
+- **涉及文件**: `backend/app/schemas/admin.py`, `backend/app/api/api_v1/endpoints/admin.py`
+
+**3. 代码质量清理**
+- `reranking_provider_adapter.py`: 删除 `CustomRerankAdapter` 中重复的 `get_rerank_url` 方法定义
+- `reranking_service.py`: 删除 `_load_config()` 中不可达的重复代码（23 行）
+- `vector_embedding_service.py`: 删除 `generate_embeddings_batch()` 中不可达的重复代码（53 行）
+- **涉及文件**: `backend/app/services/reranking_provider_adapter.py`, `backend/app/services/reranking_service.py`, `backend/app/services/vector_embedding_service.py`
+
+#### 修改文件清单 Modified Files
+
+| 文件路径 | 修改类型 | 说明 |
+|---------|---------|------|
+| `backend/app/services/embedding_provider_registry.py` | 修改 | 新增 Jina AI provider 注册，添加 URL 检测和格式化逻辑 |
+| `backend/app/services/vector_embedding_service.py` | 修改 | 添加 Jina 支持，修复 URL 拼接 bug，删除不可达代码 |
+| `backend/app/api/api_v1/endpoints/admin.py` | 修改 | embedding 测试添加 Jina 路径处理，支持前端传入配置 |
+| `backend/app/schemas/admin.py` | 修改 | `AIModelTestRequest` 添加 api_url/api_key/model_id/provider 字段 |
+| `backend/app/services/reranking_provider_adapter.py` | 修改 | 删除 CustomRerankAdapter 重复方法定义 |
+| `backend/app/services/reranking_service.py` | 修改 | 清理 _load_config 中不可达代码 |
+
+---
+
 ## [3.5.1] - 2026-03-21
 
 ### Android UI 修复与行政区划数据补全 | Android UI Fixes & Address Data Completion | 🐛✨
