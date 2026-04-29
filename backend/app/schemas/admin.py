@@ -165,6 +165,10 @@ class AIModelTestRequest(BaseModel):
     """AI model test request | AI模型测试请求"""
 
     test_payload: Optional[Dict[str, Any]] = None
+    api_url: Optional[str] = None
+    api_key: Optional[str] = None
+    model_id: Optional[str] = None
+    provider: Optional[str] = None
 
 
 class AIModelTestResponse(BaseModel):

@@ -1497,27 +1497,37 @@ async def test_ai_model(
     if model_type == "oss":
         return await test_oss_connection(db, admin)
 
-    # Get configuration from database or environment
+    # Get configuration from request body or database
     config_service = AIModelConfigService(db)
-    config = await config_service.get_config_with_decrypted_key(
-        model_type, fallback_to_env=True
-    )
-
-    if not config:
-        return AIModelTestResponse(
-            success=False,
-            model_type=model_type,
-            latency_ms=0,
-            error_message="Model not configured (missing API URL or key)",
-            timestamp=datetime.utcnow(),
+    
+    # If request body contains config, use it (for testing before saving)
+    if test_request.api_url and test_request.api_key:
+        api_url = test_request.api_url
+        api_key = test_request.api_key
+        model_id = test_request.model_id or ""
+        provider = test_request.provider or "custom"
+    else:
+        # Get configuration from database or environment
+        config = await config_service.get_config_with_decrypted_key(
+            model_type, fallback_to_env=True
         )
 
-    api_url = config["api_url"]
-    api_key = config["api_key"]
-    model_id = config["model_id"]
+        if not config:
+            return AIModelTestResponse(
+                success=False,
+                model_type=model_type,
+                latency_ms=0,
+                error_message="Model not configured (missing API URL or key)",
+                timestamp=datetime.utcnow(),
+            )
+
+        api_url = config["api_url"]
+        api_key = config["api_key"]
+        model_id = config["model_id"]
+        provider = config.get("provider", "custom")
 
     config = AIModelConfig(
-        api_url=api_url, api_key=api_key, model_id=model_id, enabled=True
+        api_url=api_url, api_key=api_key, model_id=model_id, enabled=True, provider=provider
     )
 
     # Test the connection
