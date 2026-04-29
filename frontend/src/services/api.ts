@@ -33,6 +33,28 @@ import type {
   KnowledgeSource,
 } from '../types';
 
+function unwrapApiResponse<T>(payload: ApiResponse<T> | T): T {
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    'data' in payload &&
+    payload.data !== undefined
+  ) {
+    return payload.data as T;
+  }
+
+  return payload as T;
+}
+
+function isTokenResponse(payload: unknown): payload is Token {
+  return (
+    !!payload &&
+    typeof payload === 'object' &&
+    'access_token' in payload &&
+    'refresh_token' in payload
+  );
+}
+
 const apiClient: AxiosInstance = axios.create({
   baseURL: `${CONFIG.API_BASE}${CONFIG.API_VERSION}`,
   timeout: CONFIG.REQUEST_TIMEOUT,
@@ -71,7 +93,7 @@ apiClient.interceptors.response.use(
     if (isLoginRequest && error.response?.status === 401) {
       // Return the error without redirect for login failures
       // 对于登录失败，直接返回错误而不重定向
-      const responseData = error.response?.data as ApiErrorResponse;
+      const responseData = error.response?.data as unknown as ApiErrorResponse;
       const errorMessage = responseData?.detail || responseData?.message || '登录失败 / Login failed';
       return Promise.reject(new Error(errorMessage));
     }
@@ -85,17 +107,19 @@ apiClient.interceptors.response.use(
           throw new Error('No refresh token');
         }
 
-        const response = await axios.post(`${CONFIG.API_BASE}${CONFIG.API_VERSION}/auth/refresh`, {
-          refresh_token: refreshToken,
-        });
+        const response = await axios.post<ApiResponse<Token> | Token>(
+          `${CONFIG.API_BASE}${CONFIG.API_VERSION}/auth/refresh`,
+          {
+            refresh_token: refreshToken,
+          }
+        );
 
-        // Enhanced null checking for response data
-        const responseData = response?.data;
-        if (!responseData?.data) {
+        const tokens = unwrapApiResponse(response.data);
+        if (!isTokenResponse(tokens)) {
           throw new Error('Invalid refresh token response');
         }
-        
-        const { access_token, refresh_token } = responseData.data as Token;
+
+        const { access_token, refresh_token } = tokens;
         if (!access_token || !refresh_token) {
           throw new Error('Missing tokens in response');
         }
@@ -135,7 +159,7 @@ apiClient.interceptors.response.use(
       }
     }
 
-    const responseData = error.response?.data as ApiErrorResponse;
+    const responseData = error.response?.data as unknown as ApiErrorResponse;
     const errorMessage = responseData?.detail || responseData?.message || error.message;
     console.error('API Error:', errorMessage);
     return Promise.reject(new Error(errorMessage));
@@ -147,27 +171,27 @@ export { apiClient };
 export const api = {
   get: async <T>(url: string, config?: AxiosRequestConfig): Promise<T> => {
     const response = await apiClient.get<ApiResponse<T>>(url, config);
-    return (response.data.data || response.data) as T;
+    return unwrapApiResponse(response.data);
   },
 
   post: async <T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> => {
     const response = await apiClient.post<ApiResponse<T>>(url, data, config);
-    return (response.data.data || response.data) as T;
+    return unwrapApiResponse(response.data);
   },
 
   put: async <T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> => {
     const response = await apiClient.put<ApiResponse<T>>(url, data, config);
-    return (response.data.data || response.data) as T;
+    return unwrapApiResponse(response.data);
   },
 
   patch: async <T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> => {
     const response = await apiClient.patch<ApiResponse<T>>(url, data, config);
-    return (response.data.data || response.data) as T;
+    return unwrapApiResponse(response.data);
   },
 
   delete: async <T>(url: string, config?: AxiosRequestConfig): Promise<T> => {
     const response = await apiClient.delete<ApiResponse<T>>(url, config);
-    return (response.data.data || response.data) as T;
+    return unwrapApiResponse(response.data);
   },
 
   upload: async <T>(url: string, formData: FormData, onProgress?: (progress: number) => void): Promise<T> => {
@@ -182,7 +206,7 @@ export const api = {
         }
       },
     });
-    return (response.data.data || response.data) as T;
+    return unwrapApiResponse(response.data);
   },
 };
 
@@ -638,4 +662,3 @@ export const chronicDiseasesApi = {
   getAll: () => api.get<ChronicDiseaseListResponse>('/chronic-diseases'),
   getById: (id: string) => api.get<ChronicDisease>(`/chronic-diseases/${id}`),
 };
-
