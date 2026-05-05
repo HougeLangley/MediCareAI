@@ -125,7 +125,6 @@ async def _send_doctor_notification(
         return False
 
 
-router = APIRouter()
 
 
 @router.get("/dashboard/summary", response_model=Dict[str, Any])
